@@ -1,0 +1,24 @@
+name: dashboard
+
+services:
+  dashboard:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      KERNEL_URL: ${KERNEL_URL:-http://kernel:8080}
+      # KERNEL_API_KEY: your-secret-token
+    networks:
+      - rebuno
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  rebuno:
+    name: rebuno
+    external: true
