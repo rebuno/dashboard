@@ -20,7 +20,12 @@ function getConnectionDisplay(connected: boolean | null): ConnectionDisplay {
   return { dot: "bg-phosphor-red animate-pulse", text: "text-phosphor-red", label: "Offline" };
 }
 
-export default function Header() {
+interface HeaderProps {
+  view: "executions" | "metrics";
+  onViewChange: (view: "executions" | "metrics") => void;
+}
+
+export default function Header({ view, onViewChange }: HeaderProps) {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [time, setTime] = useState("");
 
@@ -57,6 +62,24 @@ export default function Header() {
         <span className="text-[15px] font-medium text-accent tracking-[-0.5px]" style={{ fontFamily: "var(--font-dm-mono), monospace" }}>
           rebuno
         </span>
+
+        <div className="h-3 w-px bg-border ml-1" />
+
+        <div className="flex items-center">
+          {(["executions", "metrics"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => onViewChange(v)}
+              className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-widest transition-all duration-150 ${
+                view === v
+                  ? "bg-surface-2 text-gray-200"
+                  : "text-gray-600 hover:text-gray-400"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
