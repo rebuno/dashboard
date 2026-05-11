@@ -1,3 +1,5 @@
+import { sumDeltas } from "./chart-utils";
+
 interface VectorResult {
   metric: Record<string, string>;
   value: [number, string];
@@ -96,7 +98,7 @@ export async function fetchExecutionTotals(
   const cumulative = mergeByTime(result, "status");
   const deltas = toDelta(cumulative);
   return {
-    totals: latestValues(cumulative),
+    totals: sumDeltas(deltas),
     series: deltas,
   };
 }
@@ -117,7 +119,7 @@ export async function fetchIntentTotals(
   const cumulative = mergeByTime(result, "decision");
   const deltas = toDelta(cumulative);
   return {
-    totals: latestValues(cumulative),
+    totals: sumDeltas(deltas),
     series: deltas,
   };
 }
@@ -211,16 +213,6 @@ function mergeByTime(
   }
 
   return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
-}
-
-function latestValues(data: TimeSeriesPoint[]): Record<string, number> {
-  if (data.length === 0) return {};
-  const last = data[data.length - 1];
-  const result: Record<string, number> = {};
-  for (const [key, val] of Object.entries(last)) {
-    if (key !== "time") result[key] = Math.round(val as number);
-  }
-  return result;
 }
 
 function toDelta(data: TimeSeriesPoint[]): TimeSeriesPoint[] {

@@ -9,9 +9,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useMemo } from "react";
 import MetricPanel from "./MetricPanel";
 import ChartTooltip from "./ChartTooltip";
 import type { TimeSeriesPoint } from "@/lib/prometheus";
+import { formatTimeForRange } from "@/lib/chart-utils";
 
 const DECISION_COLORS: Record<string, string> = {
   accepted: "#3ddc84",
@@ -21,14 +23,6 @@ const DECISION_COLORS: Record<string, string> = {
 };
 
 const DECISIONS = ["accepted", "denied", "rate_limited", "pending_approval"];
-
-function formatTime(t: number) {
-  return new Date(t * 1000).toLocaleTimeString("en-US", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 interface Props {
   totals: Record<string, number>;
@@ -54,6 +48,7 @@ function TotalsRow({ totals }: { totals: Record<string, number> }) {
 }
 
 function Chart({ data, height }: { data: TimeSeriesPoint[]; height: string }) {
+  const formatTime = useMemo(() => formatTimeForRange(data), [data]);
   return (
     <div className={height}>
       <ResponsiveContainer width="100%" height="100%">
