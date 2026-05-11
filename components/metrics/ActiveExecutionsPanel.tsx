@@ -1,23 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import MetricPanel from "./MetricPanel";
 import ChartTooltip from "./ChartTooltip";
+import { formatTimeForRange } from "@/lib/chart-utils";
 
 interface Props {
   value: number;
   series: { time: number; value: number }[];
 }
 
-function formatTime(t: number) {
-  return new Date(t * 1000).toLocaleTimeString("en-US", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function ActiveExecutionsPanel({ value, series }: Props) {
+  const formatTime = useMemo(() => formatTimeForRange(series), [series]);
   const expandedContent = (
     <div className="flex flex-col h-full">
       <div className="mb-4">

@@ -9,23 +9,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useMemo } from "react";
 import MetricPanel from "./MetricPanel";
 import ChartTooltip from "./ChartTooltip";
 import type { LabeledSeries, TimeSeriesPoint } from "@/lib/prometheus";
+import { formatTimeForRange } from "@/lib/chart-utils";
 
 const PERCENTILE_COLORS = {
   p50: "#4dd0e1",
   p95: "#e8a832",
   p99: "#f44336",
 };
-
-function formatTime(t: number) {
-  return new Date(t * 1000).toLocaleTimeString("en-US", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDuration(seconds: number): string {
   if (seconds < 0.001) return `${(seconds * 1_000_000).toFixed(0)}us`;
@@ -73,6 +67,7 @@ function Legend() {
 }
 
 function Chart({ data, height }: { data: TimeSeriesPoint[]; height: string }) {
+  const formatTime = useMemo(() => formatTimeForRange(data), [data]);
   return (
     <div className={height}>
       <ResponsiveContainer width="100%" height="100%">

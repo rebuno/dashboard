@@ -1,3 +1,5 @@
+import { sumDeltas } from "./chart-utils";
+
 interface VectorResult {
   metric: Record<string, string>;
   value: [number, string];
@@ -96,7 +98,7 @@ export async function fetchExecutionTotals(
   const cumulative = mergeByTime(result, "status");
   const deltas = toDelta(cumulative);
   return {
-    totals: latestValues(cumulative),
+    totals: sumDeltas(deltas),
     series: deltas,
   };
 }
@@ -117,7 +119,7 @@ export async function fetchIntentTotals(
   const cumulative = mergeByTime(result, "decision");
   const deltas = toDelta(cumulative);
   return {
-    totals: latestValues(cumulative),
+    totals: sumDeltas(deltas),
     series: deltas,
   };
 }
