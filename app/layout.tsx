@@ -21,8 +21,8 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Rebuno Explorer",
-  description: "Rebuno explorer",
+  title: "Rebuno Dashboard",
+  description: "Rebuno dashboard",
 };
 
 export default function RootLayout({
