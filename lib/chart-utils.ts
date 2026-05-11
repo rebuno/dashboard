@@ -50,7 +50,7 @@ export function sumDeltas(deltas: TimeSeriesLike[]): Record<string, number> {
   for (const point of deltas) {
     for (const [key, val] of Object.entries(point)) {
       if (key === "time") continue;
-      result[key] = (result[key] || 0) + (val as number);
+      result[key] = (result[key] || 0) + Math.max(0, val as number);
     }
   }
   return result;

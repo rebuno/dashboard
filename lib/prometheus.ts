@@ -215,16 +215,6 @@ function mergeByTime(
   return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
 }
 
-function latestValues(data: TimeSeriesPoint[]): Record<string, number> {
-  if (data.length === 0) return {};
-  const last = data[data.length - 1];
-  const result: Record<string, number> = {};
-  for (const [key, val] of Object.entries(last)) {
-    if (key !== "time") result[key] = Math.round(val as number);
-  }
-  return result;
-}
-
 function toDelta(data: TimeSeriesPoint[]): TimeSeriesPoint[] {
   if (data.length < 2) return [];
   const result: TimeSeriesPoint[] = [];

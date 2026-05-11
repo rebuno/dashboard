@@ -67,4 +67,14 @@ describe("sumDeltas", () => {
     const deltas = [{ time: 1, accepted: 7 }];
     expect(sumDeltas(deltas)).toEqual({ accepted: 7 });
   });
+
+  it("clamps negative deltas from counter resets to zero", () => {
+    const deltas = [
+      { time: 1, completed: 10, failed: 3 },
+      { time: 2, completed: -8, failed: 1 },
+      { time: 3, completed: 5, failed: 2 },
+    ];
+    const result = sumDeltas(deltas);
+    expect(result).toEqual({ completed: 15, failed: 6 });
+  });
 });
