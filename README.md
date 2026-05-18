@@ -7,8 +7,8 @@ Built with Next.js, React, and Tailwind CSS.
 ## Development
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Requires a running Rebuno kernel. Set `KERNEL_URL` (defaults to `http://localhost:8080`).
@@ -25,8 +25,8 @@ The dashboard connects to the kernel via the shared `rebuno` network. Start the 
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start dev server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Type-check with tsc |
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Run ESLint |
+| `pnpm typecheck` | Type-check with tsc |
