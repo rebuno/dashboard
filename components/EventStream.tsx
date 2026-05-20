@@ -199,8 +199,22 @@ export default function EventStream({ executionId, onSendSignal, onClose }: Prop
             return (
               <div
                 key={evt.sequence}
-                className={`border-l-2 px-4 py-2.5 animate-slide-up ${style.border} ${style.bg} hover:bg-surface-2/20 transition-colors`}
+                className={`border-l-2 px-4 py-2.5 animate-slide-up ${style.border} ${style.bg} hover:bg-surface-2/20 transition-colors ${hasPayload ? "cursor-pointer" : ""}`}
                 style={{ animationDelay: `${Math.min(i * 15, 300)}ms` }}
+                onClick={hasPayload ? () => togglePayload(evt.sequence) : undefined}
+                onKeyDown={
+                  hasPayload
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          togglePayload(evt.sequence);
+                        }
+                      }
+                    : undefined
+                }
+                role={hasPayload ? "button" : undefined}
+                tabIndex={hasPayload ? 0 : undefined}
+                aria-expanded={hasPayload ? isExpanded : undefined}
               >
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-gray-700 font-mono w-8 text-right shrink-0 tabular-nums">
@@ -226,9 +240,14 @@ export default function EventStream({ executionId, onSendSignal, onClose }: Prop
 
                   {hasPayload && (
                     <button
-                      onClick={() => togglePayload(evt.sequence)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePayload(evt.sequence);
+                      }}
                       className="text-xs text-gray-600 hover:text-gray-400 transition-colors ml-auto font-mono uppercase tracking-wider"
                       aria-label={isExpanded ? "Collapse payload" : "Expand payload"}
+                      aria-expanded={isExpanded}
+                      tabIndex={-1}
                     >
                       {isExpanded ? "[-]" : "[+]"}
                     </button>
