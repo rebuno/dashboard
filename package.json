@@ -17,6 +17,12 @@
     "react-dom": "^18.3.0",
     "recharts": "^3.8.1"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
