@@ -23,6 +23,12 @@ const categoryStyle: Record<string, { border: string; bg: string; dot: string; l
     dot: "bg-phosphor-amber",
     label: "text-phosphor-amber",
   },
+  "step.approval_required": {
+    border: "border-l-phosphor-cyan",
+    bg: "bg-phosphor-cyan/[0.03]",
+    dot: "bg-phosphor-cyan",
+    label: "text-phosphor-cyan",
+  },
   "intent.accepted": {
     border: "border-l-phosphor-green",
     bg: "bg-phosphor-green/[0.03]",
@@ -36,15 +42,16 @@ const categoryStyle: Record<string, { border: string; bg: string; dot: string; l
     label: "text-phosphor-red",
   },
   signal: {
-    border: "border-l-phosphor-green",
-    bg: "bg-phosphor-green/[0.03]",
-    dot: "bg-phosphor-green",
-    label: "text-phosphor-green",
+    border: "border-l-phosphor-purple",
+    bg: "bg-phosphor-purple/[0.03]",
+    dot: "bg-phosphor-purple",
+    label: "text-phosphor-purple",
   },
 };
 
 function getCategory(type: string): string {
   if (type === "intent.accepted" || type === "intent.denied") return type;
+  if (type === "step.approval_required") return "step.approval_required";
   if (type.startsWith("step.")) return "step";
   if (type.startsWith("signal.")) return "signal";
   return "execution";
