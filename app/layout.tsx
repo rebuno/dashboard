@@ -1,40 +1,20 @@
 import type { Metadata } from "next";
-import { DM_Mono, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
-
-const dmMono = DM_Mono({
-  weight: ["400", "500"],
-  subsets: ["latin"],
-  variable: "--font-dm-mono",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  weight: ["400", "500", "600"],
-  subsets: ["latin"],
-  variable: "--font-ibm-plex-mono",
-});
-
-const instrumentSans = Instrument_Sans({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-instrument-sans",
-});
+import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Rebuno Dashboard",
   description: "Rebuno dashboard",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${dmMono.variable} ${ibmPlexMono.variable} ${instrumentSans.variable}`}>
-      <body className="min-h-screen noise-texture">
-        {children}
-        <div className="scanline-overlay" />
+    <html lang="en">
+      <body className="h-screen overflow-hidden bg-gray-50 text-gray-900">
+        <div className="flex h-full">
+          <Sidebar />
+          <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">{children}</main>
+        </div>
       </body>
     </html>
   );

@@ -1,241 +1,83 @@
-import { sumDeltas } from "./chart-utils";
-
-interface VectorResult {
-  metric: Record<string, string>;
-  value: [number, string];
+export interface Sample {
+  name: string;
+  labels: Record<string, string>;
+  value: number;
 }
 
-interface MatrixResult {
-  metric: Record<string, string>;
-  values: [number, string][];
-}
+export function parsePrometheusText(text: string): Sample[] {
+  const samples: Sample[] = [];
+  for (const line of text.split("\n")) {
+    if (!line || line.startsWith("#")) continue;
 
-interface PromResponse<T> {
-  status: string;
-  data: {
-    resultType: string;
-    result: T[];
-  };
-}
+    const braceIdx = line.indexOf("{");
+    let name: string;
+    const labels: Record<string, string> = {};
+    let rest: string;
 
-async function promQuery(query: string): Promise<VectorResult[]> {
-  const params = new URLSearchParams({ query });
-  const resp = await fetch(`/prom/query?${params}`);
-  if (!resp.ok) throw new Error(`Prometheus query failed: ${resp.statusText}`);
-  const json: PromResponse<VectorResult> = await resp.json();
-  if (json.status !== "success") throw new Error("Prometheus query error");
-  return json.data.result;
-}
+    if (braceIdx !== -1) {
+      name = line.slice(0, braceIdx);
+      const closeBrace = line.indexOf("}", braceIdx);
+      if (closeBrace === -1) continue;
+      const labelStr = line.slice(braceIdx + 1, closeBrace);
+      rest = line.slice(closeBrace + 1).trim();
 
-async function promQueryRange(
-  query: string,
-  start: number,
-  end: number,
-  step: number
-): Promise<MatrixResult[]> {
-  const params = new URLSearchParams({
-    query,
-    start: String(start),
-    end: String(end),
-    step: String(step),
-  });
-  const resp = await fetch(`/prom/query_range?${params}`);
-  if (!resp.ok) throw new Error(`Prometheus range query failed: ${resp.statusText}`);
-  const json: PromResponse<MatrixResult> = await resp.json();
-  if (json.status !== "success") throw new Error("Prometheus query error");
-  return json.data.result;
-}
-
-export interface TimeSeriesPoint {
-  time: number;
-  [key: string]: number;
-}
-
-export interface LabeledSeries {
-  label: string;
-  data: { time: number; value: number }[];
-}
-
-export async function fetchActiveExecutions(): Promise<number> {
-  const result = await promQuery("rebuno_active_executions");
-  if (result.length === 0) return 0;
-  return parseFloat(result[0].value[1]) || 0;
-}
-
-function defaultStep(rangeSeconds: number): number {
-  return Math.max(15, Math.floor(rangeSeconds / 120));
-}
-
-export async function fetchActiveExecutionsSeries(
-  rangeSeconds: number,
-  stepOverride?: number
-): Promise<{ time: number; value: number }[]> {
-  const now = Math.floor(Date.now() / 1000);
-  const step = stepOverride || defaultStep(rangeSeconds);
-  const result = await promQueryRange(
-    "rebuno_active_executions",
-    now - rangeSeconds,
-    now,
-    step
-  );
-  if (result.length === 0) return [];
-  return result[0].values.map(([t, v]) => ({ time: t, value: parseFloat(v) || 0 }));
-}
-
-export async function fetchExecutionTotals(
-  rangeSeconds: number,
-  stepOverride?: number
-): Promise<{ totals: Record<string, number>; series: TimeSeriesPoint[] }> {
-  const now = Math.floor(Date.now() / 1000);
-  const step = stepOverride || defaultStep(rangeSeconds);
-  // Fetch one extra step before the range so the first delta is accurate
-  const result = await promQueryRange(
-    "rebuno_executions_total",
-    now - rangeSeconds - step,
-    now,
-    step
-  );
-  const cumulative = mergeByTime(result, "status");
-  const deltas = toDelta(cumulative);
-  return {
-    totals: sumDeltas(deltas),
-    series: deltas,
-  };
-}
-
-export async function fetchIntentTotals(
-  rangeSeconds: number,
-  stepOverride?: number
-): Promise<{ totals: Record<string, number>; series: TimeSeriesPoint[] }> {
-  const now = Math.floor(Date.now() / 1000);
-  const step = stepOverride || defaultStep(rangeSeconds);
-  // Fetch one extra step before the range so the first delta is accurate
-  const result = await promQueryRange(
-    "rebuno_intents_total",
-    now - rangeSeconds - step,
-    now,
-    step
-  );
-  const cumulative = mergeByTime(result, "decision");
-  const deltas = toDelta(cumulative);
-  return {
-    totals: sumDeltas(deltas),
-    series: deltas,
-  };
-}
-
-export async function fetchStepDurationPercentiles(
-  rangeSeconds: number,
-  stepOverride?: number
-): Promise<{ p50: LabeledSeries[]; p95: LabeledSeries[]; p99: LabeledSeries[] }> {
-  const now = Math.floor(Date.now() / 1000);
-  const step = stepOverride || defaultStep(rangeSeconds);
-
-  const [p50, p95, p99] = await Promise.all([
-    promQueryRange(
-      "histogram_quantile(0.5, rate(rebuno_step_duration_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-    promQueryRange(
-      "histogram_quantile(0.95, rate(rebuno_step_duration_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-    promQueryRange(
-      "histogram_quantile(0.99, rate(rebuno_step_duration_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-  ]);
-
-  return {
-    p50: matrixToLabeledSeries(p50, "tool_id"),
-    p95: matrixToLabeledSeries(p95, "tool_id"),
-    p99: matrixToLabeledSeries(p99, "tool_id"),
-  };
-}
-
-export async function fetchPolicyEvalPercentiles(
-  rangeSeconds: number,
-  stepOverride?: number
-): Promise<{ p50: LabeledSeries[]; p95: LabeledSeries[]; p99: LabeledSeries[] }> {
-  const now = Math.floor(Date.now() / 1000);
-  const step = stepOverride || defaultStep(rangeSeconds);
-
-  const [p50, p95, p99] = await Promise.all([
-    promQueryRange(
-      "histogram_quantile(0.5, rate(rebuno_policy_eval_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-    promQueryRange(
-      "histogram_quantile(0.95, rate(rebuno_policy_eval_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-    promQueryRange(
-      "histogram_quantile(0.99, rate(rebuno_policy_eval_seconds_bucket[5m]))",
-      now - rangeSeconds,
-      now,
-      step
-    ),
-  ]);
-
-  return {
-    p50: matrixToLabeledSeries(p50, "action"),
-    p95: matrixToLabeledSeries(p95, "action"),
-    p99: matrixToLabeledSeries(p99, "action"),
-  };
-}
-
-function mergeByTime(
-  series: MatrixResult[],
-  labelKey: string
-): TimeSeriesPoint[] {
-  const timeMap = new Map<number, TimeSeriesPoint>();
-
-  for (const s of series) {
-    const label = s.metric[labelKey] || "unknown";
-    for (const [t, v] of s.values) {
-      let point = timeMap.get(t);
-      if (!point) {
-        point = { time: t };
-        timeMap.set(t, point);
+      const labelRegex = /(\w+)="((?:[^"\\]|\\.)*)"/g;
+      let match: RegExpExecArray | null;
+      while ((match = labelRegex.exec(labelStr)) !== null) {
+        labels[match[1]] = match[2];
       }
-      point[label] = parseFloat(v) || 0;
+    } else {
+      const spaceIdx = line.indexOf(" ");
+      if (spaceIdx === -1) continue;
+      name = line.slice(0, spaceIdx);
+      rest = line.slice(spaceIdx + 1).trim();
     }
-  }
 
-  return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+    const parts = rest.split(/\s+/);
+    const value = parseFloat(parts[0]);
+    if (Number.isNaN(value)) continue;
+
+    samples.push({ name, labels, value });
+  }
+  return samples;
 }
 
-function toDelta(data: TimeSeriesPoint[]): TimeSeriesPoint[] {
-  if (data.length < 2) return [];
-  const result: TimeSeriesPoint[] = [];
-  for (let i = 1; i < data.length; i++) {
-    const point: TimeSeriesPoint = { time: data[i].time };
-    for (const key of Object.keys(data[i])) {
-      if (key === "time") continue;
-      const diff = (data[i][key] as number) - ((data[i - 1][key] as number) || 0);
-      point[key] = Math.max(0, Math.round(diff));
-    }
-    result.push(point);
+export function groupByLabel(samples: Sample[], metricName: string, labelKey: string): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const s of samples) {
+    if (s.name !== metricName) continue;
+    const key = s.labels[labelKey] ?? "unknown";
+    result[key] = (result[key] ?? 0) + s.value;
   }
   return result;
 }
 
-function matrixToLabeledSeries(
-  series: MatrixResult[],
-  labelKey: string
-): LabeledSeries[] {
-  return series.map((s) => ({
-    label: s.metric[labelKey] || "unknown",
-    data: s.values.map(([t, v]) => ({ time: t, value: parseFloat(v) || 0 })),
-  }));
+export function singleValue(samples: Sample[], metricName: string): number | null {
+  const match = samples.find((s) => s.name === metricName);
+  return match ? match.value : null;
+}
+
+export function histogramQuantile(samples: Sample[], baseMetricName: string, quantile: number): number | null {
+  const buckets = samples
+    .filter((s) => s.name === `${baseMetricName}_bucket`)
+    .map((s) => ({ le: s.labels.le === "+Inf" ? Infinity : parseFloat(s.labels.le), count: s.value }))
+    .filter((b) => !Number.isNaN(b.le))
+    .sort((a, b) => a.le - b.le);
+
+  if (buckets.length === 0) return null;
+  const total = buckets[buckets.length - 1].count;
+  if (total <= 0) return null;
+
+  const target = quantile * total;
+  let prev = { le: 0, count: 0 };
+  for (const b of buckets) {
+    if (b.count >= target) {
+      if (b.count === prev.count) return b.le === Infinity ? prev.le : b.le;
+      const fraction = (target - prev.count) / (b.count - prev.count);
+      const upper = b.le === Infinity ? prev.le : b.le;
+      return prev.le + fraction * (upper - prev.le);
+    }
+    prev = b;
+  }
+  return prev.le === Infinity ? null : prev.le;
 }
