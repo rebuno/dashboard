@@ -54,7 +54,7 @@ export interface Approval {
   created_at: string;
 }
 
-// kernel/internal/domain/agent.go has no `json:` tags, so Agent serializes
+// rebuno/internal/domain/agent.go has no `json:` tags, so Agent serializes
 // with Go's default (PascalCase) field names — unlike every other type here.
 export interface Agent {
   ID: string;
