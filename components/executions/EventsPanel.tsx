@@ -5,6 +5,8 @@ import { getEvents, type Event } from "@/lib/api";
 import { usePolling } from "@/lib/hooks";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
 
+const eventCache = new Map<string, { events: Event[]; lastSeq: number }>();
+
 export default function EventsPanel({ executionId }: { executionId: string }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -12,9 +14,10 @@ export default function EventsPanel({ executionId }: { executionId: string }) {
   const lastSeq = useRef(0);
 
   useEffect(() => {
-    setEvents([]);
-    lastSeq.current = 0;
-    setLoading(true);
+    const cached = eventCache.get(executionId);
+    setEvents(cached?.events ?? []);
+    lastSeq.current = cached?.lastSeq ?? 0;
+    setLoading(!cached);
     setError(null);
   }, [executionId]);
 
@@ -22,8 +25,12 @@ export default function EventsPanel({ executionId }: { executionId: string }) {
     try {
       const batch = await getEvents(executionId, lastSeq.current);
       if (batch.length > 0) {
-        setEvents((prev) => [...prev, ...batch]);
         lastSeq.current = Math.max(lastSeq.current, ...batch.map((e) => e.event_seq));
+        setEvents((prev) => {
+          const next = [...prev, ...batch];
+          eventCache.set(executionId, { events: next, lastSeq: lastSeq.current });
+          return next;
+        });
       }
       setError(null);
     } catch (e) {

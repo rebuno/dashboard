@@ -38,22 +38,33 @@ export default function StepsPanel({ executionId }: { executionId: string }) {
   if (error) return <div className="p-4 text-sm text-red-600">{error}</div>;
   if (steps.length === 0) return <div className="p-4 text-sm text-gray-400">No steps yet</div>;
 
+  const ordered = [...steps].sort((a, b) =>
+    (a.started_at ?? "9999").localeCompare(b.started_at ?? "9999")
+  );
+
   return (
     <div className="divide-y divide-gray-100">
-      {steps.map((step) => (
+      {ordered.map((step) => (
         <div key={step.step_id} className="px-4 py-3">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-gray-500">{step.kind}</span>
               <span className="text-sm font-medium">{step.target}</span>
             </div>
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide ${
-                STEP_STATUS_STYLES[step.status] ?? STEP_STATUS_STYLES.proposed
-              }`}
-            >
-              {step.status}
-            </span>
+            <div className="flex items-center gap-2">
+              {step.started_at && (
+                <span className="text-xs text-gray-400">
+                  {new Date(step.started_at).toLocaleTimeString()}
+                </span>
+              )}
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide ${
+                  STEP_STATUS_STYLES[step.status] ?? STEP_STATUS_STYLES.proposed
+                }`}
+              >
+                {step.status}
+              </span>
+            </div>
           </div>
           <div className="text-xs text-gray-400 mb-1">
             step_id: <code>{step.step_id}</code> · occurrence {step.occurrence}
