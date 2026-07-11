@@ -81,7 +81,7 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
         </div>
         {execution.failure_reason && <div className="text-xs text-red-600">failure: {execution.failure_reason}</div>}
         {cancelError && <div className="text-xs text-red-600">{cancelError}</div>}
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-4">
           <JsonBlock label="Input" value={execution.input} />
           <JsonBlock label="Output" value={execution.output} />
         </div>
