@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const KERNEL_URL = process.env.KERNEL_URL || "http://localhost:8080";
-const KERNEL_API_KEY = process.env.KERNEL_API_KEY || "";
+const REBUNO_URL = process.env.REBUNO_URL || "http://localhost:8080";
+const REBUNO_API_KEY = process.env.REBUNO_API_KEY || "";
 
 async function proxy(req: NextRequest) {
   const url = new URL(req.url);
@@ -11,12 +11,12 @@ async function proxy(req: NextRequest) {
   }
 
   const kernelPath = url.pathname.replace(/^\/api/, "");
-  const target = `${KERNEL_URL}${kernelPath}${url.search}`;
+  const target = `${REBUNO_URL}${kernelPath}${url.search}`;
 
   const headers: Record<string, string> = {};
   const contentType = req.headers.get("Content-Type");
   if (contentType) headers["Content-Type"] = contentType;
-  if (KERNEL_API_KEY) headers["Authorization"] = `Bearer ${KERNEL_API_KEY}`;
+  if (REBUNO_API_KEY) headers["Authorization"] = `Bearer ${REBUNO_API_KEY}`;
 
   const init: RequestInit = { method: req.method, headers };
   if (req.method !== "GET" && req.method !== "HEAD") {

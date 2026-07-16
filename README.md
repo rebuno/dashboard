@@ -11,7 +11,7 @@ pnpm install
 pnpm dev
 ```
 
-Requires a running Rebuno kernel. Set `KERNEL_URL` (defaults to `http://localhost:8080`).
+Requires a running Rebuno kernel. Set `REBUNO_URL` (defaults to `http://localhost:8080`).
 
 ## Scripts
 
