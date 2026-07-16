@@ -1,5 +1,5 @@
 {
-  "name": "rebuno-dashboardv2",
+  "name": "rebuno-dashboard",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.1.3",
@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "js-yaml": "^5.2.1",
     "next": "^16.1.6",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"

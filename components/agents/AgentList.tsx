@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { deleteAgent, loadPolicy, type Agent } from "@/lib/api";
+import { deleteAgent, type Agent } from "@/lib/api";
+import PolicyEditor from "./PolicyEditor";
 
 export default function AgentList({ agents, onChanged }: { agents: Agent[]; onChanged: () => void }) {
-  const [policyDrafts, setPolicyDrafts] = useState<Record<string, string>>({});
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -29,31 +29,6 @@ export default function AgentList({ agents, onChanged }: { agents: Agent[]; onCh
     }
   }
 
-  function handlePolicyKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>, id: string, current: string) {
-    if (e.key !== "Tab") return;
-    e.preventDefault();
-    const el = e.currentTarget;
-    const { selectionStart, selectionEnd } = el;
-    const next = current.slice(0, selectionStart) + "  " + current.slice(selectionEnd);
-    setPolicyDrafts((prev) => ({ ...prev, [id]: next }));
-    requestAnimationFrame(() => {
-      el.selectionStart = el.selectionEnd = selectionStart + 2;
-    });
-  }
-
-  async function handleLoadPolicy(id: string, currentBundle: string) {
-    const bundle = policyDrafts[id] ?? currentBundle;
-    setBusy(id, true);
-    try {
-      await loadPolicy(id, bundle);
-      setErrors((prev) => ({ ...prev, [id]: "" }));
-    } catch (e) {
-      setErrors((prev) => ({ ...prev, [id]: e instanceof Error ? e.message : "Failed to load policy" }));
-    } finally {
-      setBusy(id, false);
-    }
-  }
-
   if (agents.length === 0) {
     return <p className="text-sm text-gray-400">No agents registered</p>;
   }
@@ -61,7 +36,7 @@ export default function AgentList({ agents, onChanged }: { agents: Agent[]; onCh
   return (
     <div className="space-y-3">
       {agents.map((agent) => (
-        <div key={agent.ID} className="border border-gray-200 rounded-md p-4 bg-white space-y-2">
+        <div key={agent.ID} className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">{agent.ID}</div>
@@ -76,26 +51,9 @@ export default function AgentList({ agents, onChanged }: { agents: Agent[]; onCh
               Delete
             </button>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Policy bundle (YAML)</label>
-            <textarea
-              value={policyDrafts[agent.ID] ?? agent.PolicyBundle ?? ""}
-              onChange={(e) => setPolicyDrafts((prev) => ({ ...prev, [agent.ID]: e.target.value }))}
-              onKeyDown={(e) => handlePolicyKeyDown(e, agent.ID, policyDrafts[agent.ID] ?? agent.PolicyBundle ?? "")}
-              rows={4}
-              spellCheck={false}
-              className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono"
-              placeholder={"default_action: allow\nrules: []"}
-            />
-            <button
-              onClick={() => handleLoadPolicy(agent.ID, agent.PolicyBundle ?? "")}
-              disabled={busyIds.has(agent.ID)}
-              className="mt-2 border border-gray-300 rounded px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
-            >
-              Load Policy
-            </button>
-            {errors[agent.ID] && <p className="text-xs text-red-600 mt-1">{errors[agent.ID]}</p>}
-          </div>
+          {errors[agent.ID] && <p className="text-xs text-red-600">{errors[agent.ID]}</p>}
+          {/* Keyed by agent so an edit in progress survives the list poll. */}
+          <PolicyEditor key={agent.ID} agentId={agent.ID} bundle={agent.PolicyBundle ?? ""} />
         </div>
       ))}
     </div>

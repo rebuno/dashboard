@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { cancelExecution, getExecution, type Execution } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cancelExecution, getEvents, getExecution, type Execution } from "@/lib/api";
 import { usePolling } from "@/lib/hooks";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
 import StatusBadge from "@/components/StatusBadge";
@@ -17,9 +17,22 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
+  const [lastEventAt, setLastEventAt] = useState<string | null>(null);
+  const lastSeq = useRef(0);
+
+  useEffect(() => {
+    lastSeq.current = 0;
+    setLastEventAt(null);
+  }, [executionId]);
+
   const load = useCallback(async () => {
     try {
       setExecution(await getExecution(executionId));
+      const batch = await getEvents(executionId, lastSeq.current);
+      if (batch.length > 0) {
+        lastSeq.current = Math.max(lastSeq.current, ...batch.map((e) => e.event_seq));
+        setLastEventAt(batch[batch.length - 1].occurred_at);
+      }
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load execution");
@@ -76,7 +89,11 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
         </div>
         <div className="text-xs text-gray-400">
           created {new Date(execution.created_at).toLocaleString()} · updated{" "}
-          {new Date(execution.updated_at).toLocaleString()}
+          {new Date(
+            lastEventAt && Date.parse(lastEventAt) > Date.parse(execution.updated_at)
+              ? lastEventAt
+              : execution.updated_at,
+          ).toLocaleString()}
           {execution.deadline_at && <> · deadline {new Date(execution.deadline_at).toLocaleString()}</>}
         </div>
         {execution.failure_reason && <div className="text-xs text-red-600">failure: {execution.failure_reason}</div>}
