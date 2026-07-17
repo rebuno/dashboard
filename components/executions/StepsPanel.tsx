@@ -44,10 +44,11 @@ export default function StepsPanel({ executionId }: { executionId: string }) {
 
   return (
     <div className="divide-y divide-gray-100">
-      {ordered.map((step) => (
+      {ordered.map((step, i) => (
         <div key={step.step_id} className="px-4 py-3">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-gray-400 tabular-nums">{i + 1}</span>
               <span className="text-xs font-mono text-gray-500">{step.kind}</span>
               <span className="text-sm font-medium">{step.target}</span>
             </div>
