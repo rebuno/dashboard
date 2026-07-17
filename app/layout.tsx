@@ -3,7 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "Rebuno Dashboard",
+  title: "Rebuno",
   description: "Rebuno dashboard",
 };
 
