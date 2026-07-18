@@ -4,3 +4,4 @@ export const EXECUTION_DETAIL_POLL_INTERVAL = 3_000;
 export const APPROVALS_POLL_INTERVAL = 5_000;
 export const AGENTS_POLL_INTERVAL = 5_000;
 export const METRICS_POLL_INTERVAL = 10_000;
+export const METRICS_RANGES = ["1h", "24h", "7d", "30d"];

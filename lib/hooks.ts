@@ -4,7 +4,6 @@ import { useEffect, useRef, type DependencyList } from "react";
 
 export function usePolling(fn: () => void | Promise<void>, intervalMs: number, deps: DependencyList = []) {
   const savedFn = useRef(fn);
-  const inFlight = useRef(false);
 
   // Keep the ref current via an effect (not a render-body write) so this
   // hook is safe under concurrent rendering. Runs after every render, before
@@ -18,9 +17,10 @@ export function usePolling(fn: () => void | Promise<void>, intervalMs: number, d
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
     async function tick() {
-      if (cancelled || inFlight.current) return;
-      inFlight.current = true;
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
         await savedFn.current();
       } catch {
@@ -28,7 +28,7 @@ export function usePolling(fn: () => void | Promise<void>, intervalMs: number, d
         // try/catches internally); this is just a safety net against an
         // unhandled rejection reaching the console.
       } finally {
-        inFlight.current = false;
+        inFlight = false;
       }
     }
     tick();

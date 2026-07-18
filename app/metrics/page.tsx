@@ -1,71 +1,95 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { parsePrometheusText, groupByLabel, singleValue, histogramQuantile, type Sample } from "@/lib/prometheus";
+import { useCallback, useRef, useState } from "react";
 import { usePolling } from "@/lib/hooks";
-import { METRICS_POLL_INTERVAL } from "@/lib/constants";
+import { METRICS_POLL_INTERVAL, METRICS_RANGES } from "@/lib/constants";
 import CounterCard from "@/components/metrics/CounterCard";
 import BreakdownBars from "@/components/metrics/BreakdownBars";
 import QuantileCard from "@/components/metrics/QuantileCard";
 
+interface MetricsResponse {
+  source: "prometheus" | "kernel";
+  range: string | null;
+  counters: Record<string, number | null>;
+  gauges: { queueDepth: number | null };
+  breakdowns: Record<string, Record<string, number>>;
+  quantiles: Record<string, { p50: number | null; p95: number | null; p99: number | null }>;
+}
+
+const EMPTY_QUANTILES = { p50: null, p95: null, p99: null };
+
 export default function MetricsPage() {
-  const [samples, setSamples] = useState<Sample[]>([]);
+  const [range, setRange] = useState("24h");
+  const [data, setData] = useState<MetricsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const requested = useRef(range);
+
   const load = useCallback(async () => {
     try {
-      const resp = await fetch("/api/metrics");
-      if (!resp.ok) throw new Error(`Metrics fetch failed: ${resp.status}`);
-      const text = await resp.text();
-      setSamples(parsePrometheusText(text));
+      const resp = await fetch(`/api/metrics/query?range=${range}`);
+      const body = await resp.json();
+      if (requested.current !== range) return;
+      if (!resp.ok) throw new Error(body.error || `Metrics fetch failed: ${resp.status}`);
+      setData(body);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load metrics");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range]);
 
-  usePolling(load, METRICS_POLL_INTERVAL);
+  function selectRange(r: string) {
+    requested.current = r;
+    setRange(r);
+  }
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Loading metrics…</div>;
-  if (error) return <div className="p-6 text-sm text-red-600">{error}</div>;
+  usePolling(load, METRICS_POLL_INTERVAL, [range]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto w-full space-y-4">
-      <h1 className="text-lg font-semibold">Metrics</h1>
-      <div className="grid grid-cols-2 gap-4">
-        <CounterCard label="Executions Created" value={singleValue(samples, "rebuno_executions_created_total")} />
-        <CounterCard label="Queue Depth" value={singleValue(samples, "rebuno_queue_depth")} />
-        <CounterCard
-          label="Dispatches Reclaimed"
-          value={singleValue(samples, "rebuno_dispatches_reclaimed_total")}
-        />
-        <BreakdownBars
-          label="Executions Completed"
-          data={groupByLabel(samples, "rebuno_executions_completed_total", "status")}
-        />
-        <BreakdownBars label="Steps Submitted" data={groupByLabel(samples, "rebuno_steps_submitted_total", "kind")} />
-        <BreakdownBars label="Replay" data={groupByLabel(samples, "rebuno_replay_total", "hit")} />
-        <BreakdownBars
-          label="Dispatch Outcomes"
-          data={groupByLabel(samples, "rebuno_dispatch_outcomes_total", "outcome")}
-        />
-        <BreakdownBars label="Worker Errors" data={groupByLabel(samples, "rebuno_worker_errors_total", "worker")} />
-        <QuantileCard
-          label="Dispatch Latency"
-          p50={histogramQuantile(samples, "rebuno_dispatch_latency_seconds", 0.5)}
-          p95={histogramQuantile(samples, "rebuno_dispatch_latency_seconds", 0.95)}
-          p99={histogramQuantile(samples, "rebuno_dispatch_latency_seconds", 0.99)}
-        />
-        <QuantileCard
-          label="Policy Evaluation Latency"
-          p50={histogramQuantile(samples, "rebuno_policy_latency_seconds", 0.5)}
-          p95={histogramQuantile(samples, "rebuno_policy_latency_seconds", 0.95)}
-          p99={histogramQuantile(samples, "rebuno_policy_latency_seconds", 0.99)}
-        />
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Metrics</h1>
+        {data?.source === "kernel" ? (
+          <span className="text-xs text-gray-500">since kernel start · no PROMETHEUS_URL</span>
+        ) : (
+          <div className="flex gap-1">
+            {METRICS_RANGES.map((r) => (
+              <button
+                key={r}
+                onClick={() => selectRange(r)}
+                className={`px-2.5 py-1 text-xs rounded-md border ${
+                  r === range
+                    ? "bg-blue-500 border-blue-500 text-white"
+                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {loading && <div className="text-sm text-gray-400">Loading metrics…</div>}
+      {error && <div className="text-sm text-red-600">{error}</div>}
+
+      {data && (
+        <div className="grid grid-cols-2 gap-4">
+          <CounterCard label="Executions Created" value={data.counters.executionsCreated} />
+          <CounterCard label="Queue Depth (now)" value={data.gauges.queueDepth} />
+          <CounterCard label="Dispatches Reclaimed" value={data.counters.dispatchesReclaimed} />
+          <BreakdownBars label="Executions Completed" data={data.breakdowns.executionsCompleted ?? {}} />
+          <BreakdownBars label="Steps Submitted" data={data.breakdowns.stepsSubmitted ?? {}} />
+          <BreakdownBars label="Replay" data={data.breakdowns.replay ?? {}} />
+          <BreakdownBars label="Dispatch Outcomes" data={data.breakdowns.dispatchOutcomes ?? {}} />
+          <BreakdownBars label="Worker Errors" data={data.breakdowns.workerErrors ?? {}} />
+          <QuantileCard label="Dispatch Latency" {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)} />
+          <QuantileCard label="Policy Evaluation Latency" {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)} />
+        </div>
+      )}
     </div>
   );
 }
