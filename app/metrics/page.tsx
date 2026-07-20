@@ -85,6 +85,9 @@ export default function MetricsPage() {
           <BreakdownBars label="Steps Submitted" data={data.breakdowns.stepsSubmitted ?? {}} />
           <BreakdownBars label="Replay" data={data.breakdowns.replay ?? {}} />
           <BreakdownBars label="Dispatch Outcomes" data={data.breakdowns.dispatchOutcomes ?? {}} />
+          <BreakdownBars label="Policy Decisions" data={data.breakdowns.policyDecisions ?? {}} />
+          <BreakdownBars label="Approval Outcomes" data={data.breakdowns.approvalOutcomes ?? {}} />
+          <BreakdownBars label="Rate Limit" data={data.breakdowns.rateLimit ?? {}} />
           <BreakdownBars label="Worker Errors" data={data.breakdowns.workerErrors ?? {}} />
           <QuantileCard label="Dispatch Latency" {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)} />
           <QuantileCard label="Policy Evaluation Latency" {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)} />

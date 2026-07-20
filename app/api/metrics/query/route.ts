@@ -16,6 +16,9 @@ const BREAKDOWNS: Record<string, [metric: string, label: string]> = {
   stepsSubmitted: ["rebuno_steps_submitted_total", "kind"],
   replay: ["rebuno_replay_total", "hit"],
   dispatchOutcomes: ["rebuno_dispatch_outcomes_total", "outcome"],
+  policyDecisions: ["rebuno_policy_decisions_total", "decision"],
+  approvalOutcomes: ["rebuno_approval_outcomes_total", "outcome"],
+  rateLimit: ["rebuno_rate_limit_decisions_total", "outcome"],
   workerErrors: ["rebuno_worker_errors_total", "worker"],
 };
 
