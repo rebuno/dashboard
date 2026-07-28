@@ -39,13 +39,16 @@ export default function Sidebar() {
       </div>
       <nav className="flex-1 py-2">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active =
+            pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex items-center justify-between px-4 py-2 text-sm ${
-                active ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-50"
+                active
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <span>{item.label}</span>
@@ -61,10 +64,18 @@ export default function Sidebar() {
       <div className="px-4 py-3 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-500">
         <span
           className={`w-2 h-2 rounded-full ${
-            connected === null ? "bg-gray-300" : connected ? "bg-green-500" : "bg-red-500"
+            connected === null
+              ? "bg-gray-300"
+              : connected
+                ? "bg-green-500"
+                : "bg-red-500"
           }`}
         />
-        {connected === null ? "Connecting" : connected ? "Connected" : "Disconnected"}
+        {connected === null
+          ? "Connecting"
+          : connected
+            ? "Connected"
+            : "Disconnected"}
       </div>
     </aside>
   );

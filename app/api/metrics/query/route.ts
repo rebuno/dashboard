@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { METRICS_RANGES } from "@/lib/constants";
-import { parsePrometheusText, groupByLabel, singleValue, histogramQuantile } from "@/lib/prometheus";
+import {
+  parsePrometheusText,
+  groupByLabel,
+  singleValue,
+  histogramQuantile,
+} from "@/lib/prometheus";
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL || "";
 const REBUNO_URL = process.env.REBUNO_URL || "http://localhost:8080";
@@ -39,7 +44,8 @@ async function query(expr: string): Promise<VectorResult[]> {
   const resp = await fetch(url, { cache: "no-store" });
   if (!resp.ok) throw new Error(`Prometheus ${resp.status} for: ${expr}`);
   const body = await resp.json();
-  if (body.status !== "success") throw new Error(body.error || "Prometheus query failed");
+  if (body.status !== "success")
+    throw new Error(body.error || "Prometheus query failed");
   return body.data.result ?? [];
 }
 
@@ -56,12 +62,16 @@ async function fromKernel() {
   const headers: Record<string, string> = {};
   if (REBUNO_API_KEY) headers["Authorization"] = `Bearer ${REBUNO_API_KEY}`;
 
-  const resp = await fetch(`${REBUNO_URL}/metrics`, { headers, cache: "no-store" });
+  const resp = await fetch(`${REBUNO_URL}/metrics`, {
+    headers,
+    cache: "no-store",
+  });
   if (!resp.ok) throw new Error(`Kernel /metrics returned ${resp.status}`);
   const samples = parsePrometheusText(await resp.text());
 
   const counters: Record<string, number | null> = {};
-  for (const [k, metric] of Object.entries(COUNTERS)) counters[k] = singleValue(samples, metric);
+  for (const [k, metric] of Object.entries(COUNTERS))
+    counters[k] = singleValue(samples, metric);
 
   const breakdowns: Record<string, Record<string, number>> = {};
   for (const [k, [metric, label]] of Object.entries(BREAKDOWNS)) {
@@ -70,7 +80,9 @@ async function fromKernel() {
 
   const quantiles: Record<string, Record<string, number | null>> = {};
   for (const [k, metric] of Object.entries(HISTOGRAMS)) {
-    const [p50, p95, p99] = QUANTILES.map((q) => histogramQuantile(samples, metric, q));
+    const [p50, p95, p99] = QUANTILES.map((q) =>
+      histogramQuantile(samples, metric, q),
+    );
     quantiles[k] = { p50, p95, p99 };
   }
 
@@ -90,13 +102,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(await fromKernel());
     } catch (err) {
       console.error("Failed to scrape kernel /metrics", err);
-      return NextResponse.json({ error: "Kernel unavailable" }, { status: 502 });
+      return NextResponse.json(
+        { error: "Kernel unavailable" },
+        { status: 502 },
+      );
     }
   }
 
   const range = req.nextUrl.searchParams.get("range") ?? "24h";
   if (!METRICS_RANGES.includes(range)) {
-    return NextResponse.json({ error: `Unsupported range: ${range}` }, { status: 400 });
+    return NextResponse.json(
+      { error: `Unsupported range: ${range}` },
+      { status: 400 },
+    );
   }
 
   try {
@@ -104,23 +122,30 @@ export async function GET(req: NextRequest) {
     const breakdownKeys = Object.keys(BREAKDOWNS);
     const histogramKeys = Object.keys(HISTOGRAMS);
 
-    const [counterResults, queueDepth, breakdownResults, histogramResults] = await Promise.all([
-      Promise.all(counterKeys.map((k) => query(`sum(increase(${COUNTERS[k]}[${range}]))`))),
-      query("rebuno_queue_depth"),
-      Promise.all(
-        breakdownKeys.map((k) => {
-          const [metric, label] = BREAKDOWNS[k];
-          return query(`sum by (${label}) (increase(${metric}[${range}]))`);
-        }),
-      ),
-      Promise.all(
-        histogramKeys.flatMap((k) =>
-          QUANTILES.map((q) =>
-            query(`histogram_quantile(${q}, sum by (le) (rate(${HISTOGRAMS[k]}_bucket[${range}])))`),
+    const [counterResults, queueDepth, breakdownResults, histogramResults] =
+      await Promise.all([
+        Promise.all(
+          counterKeys.map((k) =>
+            query(`sum(increase(${COUNTERS[k]}[${range}]))`),
           ),
         ),
-      ),
-    ]);
+        query("rebuno_queue_depth"),
+        Promise.all(
+          breakdownKeys.map((k) => {
+            const [metric, label] = BREAKDOWNS[k];
+            return query(`sum by (${label}) (increase(${metric}[${range}]))`);
+          }),
+        ),
+        Promise.all(
+          histogramKeys.flatMap((k) =>
+            QUANTILES.map((q) =>
+              query(
+                `histogram_quantile(${q}, sum by (le) (rate(${HISTOGRAMS[k]}_bucket[${range}])))`,
+              ),
+            ),
+          ),
+        ),
+      ]);
 
     const counters: Record<string, number | null> = {};
     counterKeys.forEach((k, i) => {
@@ -134,14 +159,17 @@ export async function GET(req: NextRequest) {
       const entries: Record<string, number> = {};
       for (const r of breakdownResults[i]) {
         const v = parseFloat(r.value[1]);
-        if (!Number.isNaN(v)) entries[r.metric[label] ?? "unknown"] = Math.round(v);
+        if (!Number.isNaN(v))
+          entries[r.metric[label] ?? "unknown"] = Math.round(v);
       }
       breakdowns[k] = entries;
     });
 
     const quantiles: Record<string, Record<string, number | null>> = {};
     histogramKeys.forEach((k, i) => {
-      const [p50, p95, p99] = QUANTILES.map((_, qi) => scalar(histogramResults[i * QUANTILES.length + qi]));
+      const [p50, p95, p99] = QUANTILES.map((_, qi) =>
+        scalar(histogramResults[i * QUANTILES.length + qi]),
+      );
       quantiles[k] = { p50, p95, p99 };
     });
 
@@ -155,6 +183,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("Failed to query Prometheus", err);
-    return NextResponse.json({ error: "Metrics backend unavailable" }, { status: 502 });
+    return NextResponse.json(
+      { error: "Metrics backend unavailable" },
+      { status: 502 },
+    );
   }
 }

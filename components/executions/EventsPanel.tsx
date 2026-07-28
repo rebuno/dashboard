@@ -25,10 +25,16 @@ export default function EventsPanel({ executionId }: { executionId: string }) {
     try {
       const batch = await getEvents(executionId, lastSeq.current);
       if (batch.length > 0) {
-        lastSeq.current = Math.max(lastSeq.current, ...batch.map((e) => e.event_seq));
+        lastSeq.current = Math.max(
+          lastSeq.current,
+          ...batch.map((e) => e.event_seq),
+        );
         setEvents((prev) => {
           const next = [...prev, ...batch];
-          eventCache.set(executionId, { events: next, lastSeq: lastSeq.current });
+          eventCache.set(executionId, {
+            events: next,
+            lastSeq: lastSeq.current,
+          });
           return next;
         });
       }
@@ -42,17 +48,23 @@ export default function EventsPanel({ executionId }: { executionId: string }) {
 
   usePolling(load, EXECUTION_DETAIL_POLL_INTERVAL, [executionId]);
 
-  if (loading) return <div className="p-4 text-sm text-gray-400">Loading events…</div>;
+  if (loading)
+    return <div className="p-4 text-sm text-gray-400">Loading events…</div>;
   if (error) return <div className="p-4 text-sm text-red-600">{error}</div>;
-  if (events.length === 0) return <div className="p-4 text-sm text-gray-400">No events yet</div>;
+  if (events.length === 0)
+    return <div className="p-4 text-sm text-gray-400">No events yet</div>;
 
   return (
     <div className="divide-y divide-gray-100 font-mono text-xs">
       {events.map((evt) => (
         <div key={evt.event_seq} className="px-4 py-2">
           <div className="flex items-center gap-3">
-            <span className="text-gray-400 tabular-nums w-10 text-right">{evt.event_seq}</span>
-            <span className="text-gray-400">{new Date(evt.occurred_at).toLocaleTimeString()}</span>
+            <span className="text-gray-400 tabular-nums w-10 text-right">
+              {evt.event_seq}
+            </span>
+            <span className="text-gray-400">
+              {new Date(evt.occurred_at).toLocaleTimeString()}
+            </span>
             <span className="font-medium text-gray-700">{evt.type}</span>
           </div>
           {evt.payload && Object.keys(evt.payload).length > 0 && (

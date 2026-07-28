@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, type DependencyList } from "react";
 
-export function usePolling(fn: () => void | Promise<void>, intervalMs: number, deps: DependencyList = []) {
+export function usePolling(
+  fn: () => void | Promise<void>,
+  intervalMs: number,
+  deps: DependencyList = [],
+) {
   const savedFn = useRef(fn);
 
   // Keep the ref current via an effect (not a render-body write) so this

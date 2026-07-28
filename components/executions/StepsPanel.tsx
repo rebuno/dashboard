@@ -34,12 +34,14 @@ export default function StepsPanel({ executionId }: { executionId: string }) {
 
   usePolling(load, EXECUTION_DETAIL_POLL_INTERVAL, [executionId]);
 
-  if (loading) return <div className="p-4 text-sm text-gray-400">Loading steps…</div>;
+  if (loading)
+    return <div className="p-4 text-sm text-gray-400">Loading steps…</div>;
   if (error) return <div className="p-4 text-sm text-red-600">{error}</div>;
-  if (steps.length === 0) return <div className="p-4 text-sm text-gray-400">No steps yet</div>;
+  if (steps.length === 0)
+    return <div className="p-4 text-sm text-gray-400">No steps yet</div>;
 
   const ordered = [...steps].sort((a, b) =>
-    (a.started_at ?? "9999").localeCompare(b.started_at ?? "9999")
+    (a.started_at ?? "9999").localeCompare(b.started_at ?? "9999"),
   );
 
   return (
@@ -48,8 +50,12 @@ export default function StepsPanel({ executionId }: { executionId: string }) {
         <div key={step.step_id} className="px-4 py-3">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-gray-400 tabular-nums">{i + 1}</span>
-              <span className="text-xs font-mono text-gray-500">{step.kind}</span>
+              <span className="text-xs font-mono text-gray-400 tabular-nums">
+                {i + 1}
+              </span>
+              <span className="text-xs font-mono text-gray-500">
+                {step.kind}
+              </span>
               <span className="text-sm font-medium">{step.target}</span>
             </div>
             <div className="flex items-center gap-2">

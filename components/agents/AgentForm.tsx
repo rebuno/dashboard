@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { registerAgent } from "@/lib/api";
 
-export default function AgentForm({ onRegistered }: { onRegistered: () => void }) {
+export default function AgentForm({
+  onRegistered,
+}: {
+  onRegistered: () => void;
+}) {
   const [id, setId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -28,11 +32,16 @@ export default function AgentForm({ onRegistered }: { onRegistered: () => void }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
+    <form
+      onSubmit={handleSubmit}
+      className="border border-gray-200 rounded-md p-4 bg-white space-y-3"
+    >
       <h2 className="text-sm font-medium">Register Agent</h2>
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">ID</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            ID
+          </label>
           <input
             value={id}
             onChange={(e) => setId(e.target.value)}
@@ -41,7 +50,9 @@ export default function AgentForm({ onRegistered }: { onRegistered: () => void }
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Webhook URL</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Webhook URL
+          </label>
           <input
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
@@ -51,7 +62,9 @@ export default function AgentForm({ onRegistered }: { onRegistered: () => void }
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Secret</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Secret
+          </label>
           <input
             value={secret}
             onChange={(e) => setSecret(e.target.value)}

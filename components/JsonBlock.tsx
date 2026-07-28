@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export default function JsonBlock({ label, value }: { label: string; value: unknown }) {
+export default function JsonBlock({
+  label,
+  value,
+}: {
+  label: string;
+  value: unknown;
+}) {
   const [open, setOpen] = useState(false);
   if (value == null) return null;
   return (

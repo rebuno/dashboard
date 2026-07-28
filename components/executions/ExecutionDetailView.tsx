@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cancelExecution, getEvents, getExecution, type Execution } from "@/lib/api";
+import {
+  cancelExecution,
+  getEvents,
+  getExecution,
+  type Execution,
+} from "@/lib/api";
 import { usePolling } from "@/lib/hooks";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
 import StatusBadge from "@/components/StatusBadge";
@@ -9,7 +14,11 @@ import JsonBlock from "@/components/JsonBlock";
 import StepsPanel from "@/components/executions/StepsPanel";
 import EventsPanel from "@/components/executions/EventsPanel";
 
-export default function ExecutionDetailView({ executionId }: { executionId: string }) {
+export default function ExecutionDetailView({
+  executionId,
+}: {
+  executionId: string;
+}) {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +39,10 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
       setExecution(await getExecution(executionId));
       const batch = await getEvents(executionId, lastSeq.current);
       if (batch.length > 0) {
-        lastSeq.current = Math.max(lastSeq.current, ...batch.map((e) => e.event_seq));
+        lastSeq.current = Math.max(
+          lastSeq.current,
+          ...batch.map((e) => e.event_seq),
+        );
         setLastEventAt(batch[batch.length - 1].occurred_at);
       }
       setError(null);
@@ -60,7 +72,9 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
   if (error) return <div className="p-6 text-sm text-red-600">{error}</div>;
   if (!execution) return null;
 
-  const isTerminal = ["completed", "failed", "cancelled"].includes(execution.status);
+  const isTerminal = ["completed", "failed", "cancelled"].includes(
+    execution.status,
+  );
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -83,21 +97,31 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
           {execution.agent_version && (
             <>
               {" "}
-              · version: <span className="text-gray-700">{execution.agent_version}</span>
+              · version:{" "}
+              <span className="text-gray-700">{execution.agent_version}</span>
             </>
           )}
         </div>
         <div className="text-xs text-gray-400">
           created {new Date(execution.created_at).toLocaleString()} · updated{" "}
           {new Date(
-            lastEventAt && Date.parse(lastEventAt) > Date.parse(execution.updated_at)
+            lastEventAt &&
+              Date.parse(lastEventAt) > Date.parse(execution.updated_at)
               ? lastEventAt
               : execution.updated_at,
           ).toLocaleString()}
-          {execution.deadline_at && <> · deadline {new Date(execution.deadline_at).toLocaleString()}</>}
+          {execution.deadline_at && (
+            <> · deadline {new Date(execution.deadline_at).toLocaleString()}</>
+          )}
         </div>
-        {execution.failure_reason && <div className="text-xs text-red-600">failure: {execution.failure_reason}</div>}
-        {cancelError && <div className="text-xs text-red-600">{cancelError}</div>}
+        {execution.failure_reason && (
+          <div className="text-xs text-red-600">
+            failure: {execution.failure_reason}
+          </div>
+        )}
+        {cancelError && (
+          <div className="text-xs text-red-600">{cancelError}</div>
+        )}
         <div className="flex flex-col gap-4">
           <JsonBlock label="Input" value={execution.input} />
           <JsonBlock label="Output" value={execution.output} />
@@ -109,7 +133,9 @@ export default function ExecutionDetailView({ executionId }: { executionId: stri
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium ${
-              tab === t ? "border-b-2 border-blue-600 text-blue-700" : "text-gray-500 hover:text-gray-700"
+              tab === t
+                ? "border-b-2 border-blue-600 text-blue-700"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             {t === "steps" ? "Steps" : "Events"}

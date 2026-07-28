@@ -53,7 +53,9 @@ export interface PolicyDraft {
   rules: RuleDraft[];
 }
 
-export type ParseResult = { ok: true; draft: PolicyDraft } | { ok: false; reason: string };
+export type ParseResult =
+  | { ok: true; draft: PolicyDraft }
+  | { ok: false; reason: string };
 
 let seq = 0;
 export function uid(): string {
@@ -78,7 +80,12 @@ export function emptyRule(): RuleDraft {
 }
 
 export function emptyRateLimit(): RateLimit {
-  return { maxCalls: "", window: "", perWhat: "execution", onLimiterError: "allow" };
+  return {
+    maxCalls: "",
+    window: "",
+    perWhat: "execution",
+    onLimiterError: "allow",
+  };
 }
 
 export function emptyDraft(): PolicyDraft {
@@ -86,12 +93,19 @@ export function emptyDraft(): PolicyDraft {
 }
 
 export function isCatchAll(r: RuleDraft): boolean {
-  return r.stepKind === null && !r.targets?.length && !r.agentIds?.length && r.args.length === 0;
+  return (
+    r.stepKind === null &&
+    !r.targets?.length &&
+    !r.agentIds?.length &&
+    r.args.length === 0
+  );
 }
 
 // ---------------------------------------------------------------- serialize
 
-function argsToYaml(args: ArgCondition[]): Record<string, Record<string, unknown>> | undefined {
+function argsToYaml(
+  args: ArgCondition[],
+): Record<string, Record<string, unknown>> | undefined {
   const out: Record<string, Record<string, unknown>> = {};
   for (const a of args) {
     const key = a.key.trim();
@@ -131,11 +145,15 @@ function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
     };
     // "execution" and fail-open are the engine's defaults, so leave them implicit.
     if (r.rateLimit.perWhat !== "execution") rl.per_what = r.rateLimit.perWhat;
-    if (r.rateLimit.onLimiterError !== "allow") rl.on_limiter_error = r.rateLimit.onLimiterError;
+    if (r.rateLimit.onLimiterError !== "allow")
+      rl.on_limiter_error = r.rateLimit.onLimiterError;
     then.rate_limit = rl;
   }
 
-  const out: Record<string, unknown> = { id: r.id.trim(), priority: (index + 1) * PRIORITY_STEP };
+  const out: Record<string, unknown> = {
+    id: r.id.trim(),
+    priority: (index + 1) * PRIORITY_STEP,
+  };
   // An omitted `when` is the zero Condition, which matches every step — same as
   // `when: {}` but without implying a constraint exists.
   if (Object.keys(when).length) out.when = when;
@@ -155,19 +173,44 @@ export function serializeDraft(d: PolicyDraft): string {
 
 const ROOT_KEYS = new Set(["default_action", "rules"]);
 const RULE_KEYS = new Set(["id", "priority", "when", "then"]);
-const WHEN_KEYS = new Set(["target", "targets", "agent_id", "agent_ids", "step_kind", "arguments"]);
-const THEN_KEYS = new Set(["decision", "reason", "approval_config", "rate_limit"]);
+const WHEN_KEYS = new Set([
+  "target",
+  "targets",
+  "agent_id",
+  "agent_ids",
+  "step_kind",
+  "arguments",
+]);
+const THEN_KEYS = new Set([
+  "decision",
+  "reason",
+  "approval_config",
+  "rate_limit",
+]);
 const APPROVAL_KEYS = new Set(["approvers", "timeout", "message"]);
-const RATE_LIMIT_KEYS = new Set(["max_calls", "window", "per_what", "on_limiter_error"]);
+const RATE_LIMIT_KEYS = new Set([
+  "max_calls",
+  "window",
+  "per_what",
+  "on_limiter_error",
+]);
 
 function asObject(v: unknown, what: string): Record<string, unknown> {
-  if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error(`${what} must be a mapping`);
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    throw new Error(`${what} must be a mapping`);
   return v as Record<string, unknown>;
 }
 
-function rejectUnknown(o: Record<string, unknown>, allowed: Set<string>, what: string) {
+function rejectUnknown(
+  o: Record<string, unknown>,
+  allowed: Set<string>,
+  what: string,
+) {
   const bad = Object.keys(o).filter((k) => !allowed.has(k));
-  if (bad.length) throw new Error(`${what}: unsupported field ${bad.map((b) => `"${b}"`).join(", ")}`);
+  if (bad.length)
+    throw new Error(
+      `${what}: unsupported field ${bad.map((b) => `"${b}"`).join(", ")}`,
+    );
 }
 
 function asString(v: unknown, what: string): string {
@@ -189,15 +232,22 @@ function toArgs(raw: unknown, where: string): ArgCondition[] {
     const pred = asObject(predRaw, `${where} argument "${key}"`);
     rejectUnknown(pred, new Set(ARG_OPS), `${where} argument "${key}"`);
     const ops = ARG_OPS.filter((op) => pred[op] !== undefined);
-    if (!ops.length) throw new Error(`${where}: argument "${key}" has no constraint`);
+    if (!ops.length)
+      throw new Error(`${where}: argument "${key}" has no constraint`);
     for (const op of ops) {
       // The engine ANDs every constraint on a key, so each becomes its own row.
       out.push({
         uid: uid(),
         key,
         op,
-        value: op === "one_of" ? "" : asString(pred[op], `${where} argument "${key}" ${op}`),
-        values: op === "one_of" ? asStringList(pred[op], `${where} argument "${key}" one_of`) : [],
+        value:
+          op === "one_of"
+            ? ""
+            : asString(pred[op], `${where} argument "${key}" ${op}`),
+        values:
+          op === "one_of"
+            ? asStringList(pred[op], `${where} argument "${key}" one_of`)
+            : [],
       });
     }
   }
@@ -221,16 +271,23 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
     const p = asString(rl.per_what, `${where} rate_limit per_what`);
     // ScopeKey treats anything unrecognised as "execution"; don't paper over it.
     if (!PER_WHATS.includes(p as PerWhat)) {
-      throw new Error(`${where}: rate_limit per_what must be ${PER_WHATS.join(", ")}`);
+      throw new Error(
+        `${where}: rate_limit per_what must be ${PER_WHATS.join(", ")}`,
+      );
     }
     perWhat = p as PerWhat;
   }
 
   let onLimiterError: LimiterError = "allow";
   if (rl.on_limiter_error !== undefined) {
-    const e = asString(rl.on_limiter_error, `${where} rate_limit on_limiter_error`);
+    const e = asString(
+      rl.on_limiter_error,
+      `${where} rate_limit on_limiter_error`,
+    );
     if (!LIMITER_ERRORS.includes(e as LimiterError)) {
-      throw new Error(`${where}: rate_limit on_limiter_error must be allow or deny`);
+      throw new Error(
+        `${where}: rate_limit on_limiter_error must be allow or deny`,
+      );
     }
     onLimiterError = e as LimiterError;
   }
@@ -238,15 +295,22 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
   return { maxCalls: String(rl.max_calls), window, perWhat, onLimiterError };
 }
 
-function toRule(raw: unknown, i: number): { rule: RuleDraft; priority: number } {
+function toRule(
+  raw: unknown,
+  i: number,
+): { rule: RuleDraft; priority: number } {
   const where = `rule ${i + 1}`;
   const r = asObject(raw, where);
   rejectUnknown(r, RULE_KEYS, where);
 
   const priority = r.priority === undefined ? 0 : Number(r.priority);
-  if (!Number.isFinite(priority)) throw new Error(`${where}: priority must be a number`);
+  if (!Number.isFinite(priority))
+    throw new Error(`${where}: priority must be a number`);
 
-  const when = r.when === undefined || r.when === null ? {} : asObject(r.when, `${where} when`);
+  const when =
+    r.when === undefined || r.when === null
+      ? {}
+      : asObject(r.when, `${where} when`);
   rejectUnknown(when, WHEN_KEYS, `${where} when`);
 
   let stepKind: StepKind | null = null;
@@ -268,20 +332,30 @@ function toRule(raw: unknown, i: number): { rule: RuleDraft; priority: number } 
   }
 
   let targets: string[] | null = null;
-  if (when.target !== undefined) targets = [asString(when.target, `${where} target`)];
-  else if (when.targets !== undefined) targets = asStringList(when.targets, `${where} targets`);
+  if (when.target !== undefined)
+    targets = [asString(when.target, `${where} target`)];
+  else if (when.targets !== undefined)
+    targets = asStringList(when.targets, `${where} targets`);
 
   let agentIds: string[] | null = null;
-  if (when.agent_id !== undefined) agentIds = [asString(when.agent_id, `${where} agent_id`)];
-  else if (when.agent_ids !== undefined) agentIds = asStringList(when.agent_ids, `${where} agent_ids`);
+  if (when.agent_id !== undefined)
+    agentIds = [asString(when.agent_id, `${where} agent_id`)];
+  else if (when.agent_ids !== undefined)
+    agentIds = asStringList(when.agent_ids, `${where} agent_ids`);
 
-  const args = when.arguments === undefined ? [] : toArgs(when.arguments, where);
+  const args =
+    when.arguments === undefined ? [] : toArgs(when.arguments, where);
 
-  const then = r.then === undefined || r.then === null ? {} : asObject(r.then, `${where} then`);
+  const then =
+    r.then === undefined || r.then === null
+      ? {}
+      : asObject(r.then, `${where} then`);
   rejectUnknown(then, THEN_KEYS, `${where} then`);
   const decision = asString(then.decision, `${where} decision`);
   if (!DECISIONS.includes(decision as Decision)) {
-    throw new Error(`${where}: decision must be allow, deny or require_approval`);
+    throw new Error(
+      `${where}: decision must be allow, deny or require_approval`,
+    );
   }
 
   let approvers: string[] = [];
@@ -290,9 +364,12 @@ function toRule(raw: unknown, i: number): { rule: RuleDraft; priority: number } 
   if (then.approval_config !== undefined) {
     const ac = asObject(then.approval_config, `${where} approval_config`);
     rejectUnknown(ac, APPROVAL_KEYS, `${where} approval_config`);
-    if (ac.approvers !== undefined) approvers = asStringList(ac.approvers, `${where} approvers`);
-    if (ac.timeout !== undefined) timeout = asString(ac.timeout, `${where} timeout`);
-    if (ac.message !== undefined) message = asString(ac.message, `${where} message`);
+    if (ac.approvers !== undefined)
+      approvers = asStringList(ac.approvers, `${where} approvers`);
+    if (ac.timeout !== undefined)
+      timeout = asString(ac.timeout, `${where} timeout`);
+    if (ac.message !== undefined)
+      message = asString(ac.message, `${where} message`);
   }
 
   return {
@@ -305,11 +382,17 @@ function toRule(raw: unknown, i: number): { rule: RuleDraft; priority: number } 
       agentIds,
       args,
       decision: decision as Decision,
-      reason: then.reason === undefined ? "" : asString(then.reason, `${where} reason`),
+      reason:
+        then.reason === undefined
+          ? ""
+          : asString(then.reason, `${where} reason`),
       approvers,
       timeout,
       message,
-      rateLimit: then.rate_limit === undefined ? null : toRateLimit(then.rate_limit, where),
+      rateLimit:
+        then.rate_limit === undefined
+          ? null
+          : toRateLimit(then.rate_limit, where),
     },
   };
 }
@@ -321,7 +404,10 @@ export function parseBundle(text: string): ParseResult {
   try {
     doc = load(text);
   } catch (e) {
-    return { ok: false, reason: e instanceof Error ? e.message : "invalid YAML" };
+    return {
+      ok: false,
+      reason: e instanceof Error ? e.message : "invalid YAML",
+    };
   }
 
   try {
@@ -331,19 +417,27 @@ export function parseBundle(text: string): ParseResult {
     let defaultAction: DefaultAction = "deny";
     if (root.default_action !== undefined) {
       const da = asString(root.default_action, "default_action");
-      if (da !== "allow" && da !== "deny") throw new Error(`default_action must be "allow" or "deny"`);
+      if (da !== "allow" && da !== "deny")
+        throw new Error(`default_action must be "allow" or "deny"`);
       defaultAction = da;
     }
 
-    const rawRules = root.rules === undefined || root.rules === null ? [] : root.rules;
+    const rawRules =
+      root.rules === undefined || root.rules === null ? [] : root.rules;
     if (!Array.isArray(rawRules)) throw new Error("rules must be a list");
 
     // Sort by priority so the list reads in evaluation order — the whole point.
     const parsed = rawRules.map(toRule);
     parsed.sort((a, b) => a.priority - b.priority);
-    return { ok: true, draft: { defaultAction, rules: parsed.map((p) => p.rule) } };
+    return {
+      ok: true,
+      draft: { defaultAction, rules: parsed.map((p) => p.rule) },
+    };
   } catch (e) {
-    return { ok: false, reason: e instanceof Error ? e.message : "unsupported bundle" };
+    return {
+      ok: false,
+      reason: e instanceof Error ? e.message : "unsupported bundle",
+    };
   }
 }
 
@@ -364,9 +458,16 @@ function push(bag: Record<string, string[]>, key: string, msg: string) {
 export function validateDraft(d: PolicyDraft): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   for (const r of d.rules) {
-    if (!r.id.trim()) push(errors, r.uid, "Needs an id — the kernel rejects a bundle with an unnamed rule.");
-    if (r.targets !== null && r.targets.length === 0) push(errors, r.uid, "Target condition has no value.");
-    if (r.agentIds !== null && r.agentIds.length === 0) push(errors, r.uid, "Agent condition has no value.");
+    if (!r.id.trim())
+      push(
+        errors,
+        r.uid,
+        "Needs an id — the kernel rejects a bundle with an unnamed rule.",
+      );
+    if (r.targets !== null && r.targets.length === 0)
+      push(errors, r.uid, "Target condition has no value.");
+    if (r.agentIds !== null && r.agentIds.length === 0)
+      push(errors, r.uid, "Agent condition has no value.");
 
     const seenOps = new Set<string>();
     for (const a of r.args) {
@@ -375,14 +476,32 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
         continue;
       }
       const sig = `${a.key.trim()}:${a.op}`;
-      if (seenOps.has(sig)) push(errors, r.uid, `Argument "${a.key.trim()}" has two "${a.op}" constraints.`);
+      if (seenOps.has(sig))
+        push(
+          errors,
+          r.uid,
+          `Argument "${a.key.trim()}" has two "${a.op}" constraints.`,
+        );
       seenOps.add(sig);
       const empty = a.op === "one_of" ? a.values.length === 0 : !a.value;
-      if (empty) push(errors, r.uid, `Argument "${a.key.trim()}" needs a value — the engine ignores an empty one.`);
+      if (empty)
+        push(
+          errors,
+          r.uid,
+          `Argument "${a.key.trim()}" needs a value — the engine ignores an empty one.`,
+        );
     }
 
-    if (r.decision === "require_approval" && r.timeout.trim() && !DURATION_RE.test(r.timeout.trim())) {
-      push(errors, r.uid, `Timeout "${r.timeout.trim()}" is not a duration (e.g. 30s, 5m, 1h30m).`);
+    if (
+      r.decision === "require_approval" &&
+      r.timeout.trim() &&
+      !DURATION_RE.test(r.timeout.trim())
+    ) {
+      push(
+        errors,
+        r.uid,
+        `Timeout "${r.timeout.trim()}" is not a duration (e.g. 30s, 5m, 1h30m).`,
+      );
     }
 
     // The limiter no-ops unless both max_calls and window are > 0, so half a
@@ -390,11 +509,25 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
     if (r.rateLimit) {
       const n = Number(r.rateLimit.maxCalls);
       if (!r.rateLimit.maxCalls.trim() || !Number.isInteger(n) || n < 1) {
-        push(errors, r.uid, "Rate limit needs a whole max calls of 1 or more, or the limit does nothing.");
+        push(
+          errors,
+          r.uid,
+          "Rate limit needs a whole max calls of 1 or more, or the limit does nothing.",
+        );
       }
       const w = r.rateLimit.window.trim();
-      if (!w) push(errors, r.uid, "Rate limit needs a window, or the limit does nothing.");
-      else if (!DURATION_RE.test(w)) push(errors, r.uid, `Rate limit window "${w}" is not a duration (e.g. 1m, 1h).`);
+      if (!w)
+        push(
+          errors,
+          r.uid,
+          "Rate limit needs a window, or the limit does nothing.",
+        );
+      else if (!DURATION_RE.test(w))
+        push(
+          errors,
+          r.uid,
+          `Rate limit window "${w}" is not a duration (e.g. 1m, 1h).`,
+        );
     }
   }
   return errors;
@@ -418,8 +551,16 @@ function sameArg(x: ArgCondition, y: ArgCondition): boolean {
  */
 function subsumes(a: RuleDraft, b: RuleDraft): boolean {
   if (a.stepKind !== null && a.stepKind !== b.stepKind) return false;
-  if (a.targets !== null && (b.targets === null || !b.targets.every((t) => a.targets!.includes(t)))) return false;
-  if (a.agentIds !== null && (b.agentIds === null || !b.agentIds.every((t) => a.agentIds!.includes(t)))) return false;
+  if (
+    a.targets !== null &&
+    (b.targets === null || !b.targets.every((t) => a.targets!.includes(t)))
+  )
+    return false;
+  if (
+    a.agentIds !== null &&
+    (b.agentIds === null || !b.agentIds.every((t) => a.agentIds!.includes(t)))
+  )
+    return false;
   return a.args.every((x) => b.args.some((y) => sameArg(x, y)));
 }
 
@@ -435,11 +576,15 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
       push(
         warnings,
         r.uid,
-        `Never runs — rule ${shadow + 1} ("${s.id || "unnamed"}") above already matches every step this matches.`
+        `Never runs — rule ${shadow + 1} ("${s.id || "unnamed"}") above already matches every step this matches.`,
       );
     }
     if (isCatchAll(r) && i < d.rules.length - 1) {
-      push(warnings, r.uid, `Matches every step, so the ${d.rules.length - 1 - i} rule(s) below never run.`);
+      push(
+        warnings,
+        r.uid,
+        `Matches every step, so the ${d.rules.length - 1 - i} rule(s) below never run.`,
+      );
     }
 
     const id = r.id.trim();
@@ -448,8 +593,15 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
       // Not fatal to the engine, but rule_id is the audit key on every decision
       // and the rate-limit scope key, so a shared id merges two rules' buckets.
       if (prev !== undefined) {
-        const shared = r.rateLimit || d.rules[prev].rateLimit ? ", so they share one rate-limit bucket" : "";
-        push(warnings, r.uid, `Duplicate id — rule ${prev + 1} uses "${id}" too${shared}.`);
+        const shared =
+          r.rateLimit || d.rules[prev].rateLimit
+            ? ", so they share one rate-limit bucket"
+            : "";
+        push(
+          warnings,
+          r.uid,
+          `Duplicate id — rule ${prev + 1} uses "${id}" too${shared}.`,
+        );
       } else ids.set(id, i);
     }
   });

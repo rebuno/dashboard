@@ -82,7 +82,10 @@ function TokenInput({
   return (
     <div className="flex flex-wrap items-center gap-1 border border-gray-300 rounded px-1.5 py-1 bg-white flex-1 min-w-0">
       {values.map((v) => (
-        <span key={v} className="inline-flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5 text-xs font-mono">
+        <span
+          key={v}
+          className="inline-flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5 text-xs font-mono"
+        >
           {v}
           <button
             type="button"
@@ -146,12 +149,19 @@ function RuleCard({
     else if (kind === "target") onPatch({ targets: [] });
     else if (kind === "agent") onPatch({ agentIds: [] });
     else if (kind === "argument") {
-      onPatch({ args: [...rule.args, { uid: uid(), key: "", op: "equals", value: "", values: [] }] });
+      onPatch({
+        args: [
+          ...rule.args,
+          { uid: uid(), key: "", op: "equals", value: "", values: [] },
+        ],
+      });
     }
   }
 
   function patchArg(argUid: string, patch: Partial<RuleDraft["args"][number]>) {
-    onPatch({ args: rule.args.map((a) => (a.uid === argUid ? { ...a, ...patch } : a)) });
+    onPatch({
+      args: rule.args.map((a) => (a.uid === argUid ? { ...a, ...patch } : a)),
+    });
   }
 
   function patchLimit(patch: Partial<NonNullable<RuleDraft["rateLimit"]>>) {
@@ -178,7 +188,9 @@ function RuleCard({
         >
           ⠿
         </span>
-        <span className="text-xs text-gray-400 tabular-nums w-4">{index + 1}</span>
+        <span className="text-xs text-gray-400 tabular-nums w-4">
+          {index + 1}
+        </span>
         <select
           value={rule.decision}
           onChange={(e) => onPatch({ decision: e.target.value as Decision })}
@@ -231,7 +243,11 @@ function RuleCard({
 
       <div className="px-3 py-2 space-y-1.5">
         <div className="text-[10px] uppercase tracking-wide text-gray-400">
-          When {rule.stepKind === null && rule.targets === null && rule.agentIds === null && !rule.args.length
+          When{" "}
+          {rule.stepKind === null &&
+          rule.targets === null &&
+          rule.agentIds === null &&
+          !rule.args.length
             ? "— matches every step"
             : "all of"}
         </div>
@@ -241,7 +257,9 @@ function RuleCard({
             <span className={rowLabel}>Step kind</span>
             <select
               value={rule.stepKind}
-              onChange={(e) => onPatch({ stepKind: e.target.value as RuleDraft["stepKind"] })}
+              onChange={(e) =>
+                onPatch({ stepKind: e.target.value as RuleDraft["stepKind"] })
+              }
               className={`${field} font-mono`}
             >
               {STEP_KINDS.map((k) => (
@@ -283,7 +301,11 @@ function RuleCard({
         {rule.agentIds !== null && (
           <div className="flex items-center gap-2">
             <span className={rowLabel}>Agent</span>
-            <TokenInput values={rule.agentIds} onChange={(v) => onPatch({ agentIds: v })} placeholder="agent id" />
+            <TokenInput
+              values={rule.agentIds}
+              onChange={(v) => onPatch({ agentIds: v })}
+              placeholder="agent id"
+            />
             <button
               type="button"
               onClick={() => onPatch({ agentIds: null })}
@@ -319,7 +341,11 @@ function RuleCard({
               ))}
             </select>
             {a.op === "one_of" ? (
-              <TokenInput values={a.values} onChange={(v) => patchArg(a.uid, { values: v })} placeholder="value" />
+              <TokenInput
+                values={a.values}
+                onChange={(v) => patchArg(a.uid, { values: v })}
+                placeholder="value"
+              />
             ) : (
               <input
                 value={a.value}
@@ -331,7 +357,9 @@ function RuleCard({
             )}
             <button
               type="button"
-              onClick={() => onPatch({ args: rule.args.filter((x) => x.uid !== a.uid) })}
+              onClick={() =>
+                onPatch({ args: rule.args.filter((x) => x.uid !== a.uid) })
+              }
               className="text-gray-300 hover:text-gray-600 text-xs"
               aria-label="Remove argument condition"
             >
@@ -350,13 +378,17 @@ function RuleCard({
           aria-label="Add condition"
         >
           <option value="">+ add condition</option>
-          {rule.stepKind === null && <option value="step_kind">Step kind</option>}
+          {rule.stepKind === null && (
+            <option value="step_kind">Step kind</option>
+          )}
           {rule.targets === null && <option value="target">Target</option>}
           {rule.agentIds === null && <option value="agent">Agent</option>}
           <option value="argument">Argument</option>
         </select>
 
-        <div className="text-[10px] uppercase tracking-wide text-gray-400 pt-1">Then</div>
+        <div className="text-[10px] uppercase tracking-wide text-gray-400 pt-1">
+          Then
+        </div>
         <div className="flex items-center gap-2">
           <span className={rowLabel}>Because</span>
           <input
@@ -399,8 +431,9 @@ function RuleCard({
             </div>
             {rule.approvers.length > 0 && (
               <p className="text-[10px] text-gray-400">
-                Anyone else is refused, but the kernel takes the approver&apos;s name from the request — this routes
-                approvals, it doesn&apos;t authenticate them.
+                Anyone else is refused, but the kernel takes the approver&apos;s
+                name from the request — this routes approvals, it doesn&apos;t
+                authenticate them.
               </p>
             )}
           </div>
@@ -431,7 +464,9 @@ function RuleCard({
               />
               <select
                 value={rule.rateLimit.perWhat}
-                onChange={(e) => patchLimit({ perWhat: e.target.value as PerWhat })}
+                onChange={(e) =>
+                  patchLimit({ perWhat: e.target.value as PerWhat })
+                }
                 className={field}
                 aria-label="Rate limit scope"
               >
@@ -454,7 +489,9 @@ function RuleCard({
               <span className={rowLabel}>If broken</span>
               <select
                 value={rule.rateLimit.onLimiterError}
-                onChange={(e) => patchLimit({ onLimiterError: e.target.value as LimiterError })}
+                onChange={(e) =>
+                  patchLimit({ onLimiterError: e.target.value as LimiterError })
+                }
                 className={field}
                 aria-label="On limiter error"
               >
@@ -464,7 +501,9 @@ function RuleCard({
                   </option>
                 ))}
               </select>
-              <span className="text-[10px] text-gray-400">when the limiter itself is unavailable</span>
+              <span className="text-[10px] text-gray-400">
+                when the limiter itself is unavailable
+              </span>
             </div>
           </div>
         )}
@@ -494,15 +533,27 @@ function RuleCard({
   );
 }
 
-export default function PolicyEditor({ agentId, bundle }: { agentId: string; bundle: string }) {
+export default function PolicyEditor({
+  agentId,
+  bundle,
+}: {
+  agentId: string;
+  bundle: string;
+}) {
   // Parsed once: the agents list polls, and re-deriving state from props would
   // wipe an in-progress edit on every tick.
   const [parsed] = useState(() => parseBundle(bundle ?? ""));
-  const [draft, setDraft] = useState<PolicyDraft>(() => (parsed.ok ? parsed.draft : emptyDraft()));
-  const [mode, setMode] = useState<"blocks" | "yaml">(parsed.ok ? "blocks" : "yaml");
+  const [draft, setDraft] = useState<PolicyDraft>(() =>
+    parsed.ok ? parsed.draft : emptyDraft(),
+  );
+  const [mode, setMode] = useState<"blocks" | "yaml">(
+    parsed.ok ? "blocks" : "yaml",
+  );
   const [rawYaml, setRawYaml] = useState(bundle ?? "");
   const [baseline, setBaseline] = useState(bundle ?? "");
-  const [savedYaml, setSavedYaml] = useState(() => (parsed.ok ? serializeDraft(parsed.draft) : (bundle ?? "")));
+  const [savedYaml, setSavedYaml] = useState(() =>
+    parsed.ok ? serializeDraft(parsed.draft) : (bundle ?? ""),
+  );
   const [pending, setPending] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -523,7 +574,10 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
   const dirty = currentYaml !== savedYaml;
 
   function patchRule(ruleUid: string, patch: Partial<RuleDraft>) {
-    setDraft((d) => ({ ...d, rules: d.rules.map((r) => (r.uid === ruleUid ? { ...r, ...patch } : r)) }));
+    setDraft((d) => ({
+      ...d,
+      rules: d.rules.map((r) => (r.uid === ruleUid ? { ...r, ...patch } : r)),
+    }));
   }
 
   function switchMode(next: "blocks" | "yaml") {
@@ -582,7 +636,9 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
                 type="button"
                 onClick={() => switchMode(m)}
                 className={`px-2 py-0.5 text-xs ${
-                  mode === m ? "bg-gray-100 text-gray-900 font-medium" : "bg-white text-gray-500 hover:bg-gray-50"
+                  mode === m
+                    ? "bg-gray-100 text-gray-900 font-medium"
+                    : "bg-white text-gray-500 hover:bg-gray-50"
                 }`}
               >
                 {m === "blocks" ? "Blocks" : "YAML"}
@@ -590,7 +646,9 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
             ))}
           </div>
           {dirty && <span className="text-xs text-amber-600">unsaved</span>}
-          {saved && !dirty && <span className="text-xs text-green-600">saved</span>}
+          {saved && !dirty && (
+            <span className="text-xs text-green-600">saved</span>
+          )}
         </div>
         <button
           type="button"
@@ -604,8 +662,8 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
 
       {!parsed.ok && mode === "yaml" && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-          This bundle has something the block editor can&apos;t represent, so it&apos;s shown as YAML rather than
-          rewritten: {parsed.reason}
+          This bundle has something the block editor can&apos;t represent, so
+          it&apos;s shown as YAML rather than rewritten: {parsed.reason}
         </p>
       )}
 
@@ -626,15 +684,24 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
               warnings={warnings[r.uid] ?? []}
               dragging={dragUid === r.uid}
               onPatch={(patch) => patchRule(r.uid, patch)}
-              onRemove={() => setDraft((d) => ({ ...d, rules: d.rules.filter((x) => x.uid !== r.uid) }))}
-              onMove={(to) => setDraft((d) => ({ ...d, rules: move(d.rules, i, to) }))}
+              onRemove={() =>
+                setDraft((d) => ({
+                  ...d,
+                  rules: d.rules.filter((x) => x.uid !== r.uid),
+                }))
+              }
+              onMove={(to) =>
+                setDraft((d) => ({ ...d, rules: move(d.rules, i, to) }))
+              }
               onDragStart={() => setDragUid(r.uid)}
               onDragEnd={() => setDragUid(null)}
               onDragOver={() => {
                 if (!dragUid || dragUid === r.uid) return;
                 setDraft((d) => {
                   const from = d.rules.findIndex((x) => x.uid === dragUid);
-                  return from === -1 || from === i ? d : { ...d, rules: move(d.rules, from, i) };
+                  return from === -1 || from === i
+                    ? d
+                    : { ...d, rules: move(d.rules, from, i) };
                 });
               }}
             />
@@ -642,7 +709,9 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
 
           <button
             type="button"
-            onClick={() => setDraft((d) => ({ ...d, rules: [...d.rules, emptyRule()] }))}
+            onClick={() =>
+              setDraft((d) => ({ ...d, rules: [...d.rules, emptyRule()] }))
+            }
             className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700"
           >
             + Add rule
@@ -654,7 +723,12 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
             <span className="text-xs text-gray-500">If no rule matches →</span>
             <select
               value={draft.defaultAction}
-              onChange={(e) => setDraft((d) => ({ ...d, defaultAction: e.target.value as PolicyDraft["defaultAction"] }))}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  defaultAction: e.target.value as PolicyDraft["defaultAction"],
+                }))
+              }
               className={field}
               aria-label="Default action"
             >
@@ -672,7 +746,11 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
             e.preventDefault();
             const el = e.currentTarget;
             const { selectionStart, selectionEnd } = el;
-            setRawYaml(rawYaml.slice(0, selectionStart) + "  " + rawYaml.slice(selectionEnd));
+            setRawYaml(
+              rawYaml.slice(0, selectionStart) +
+                "  " +
+                rawYaml.slice(selectionEnd),
+            );
             requestAnimationFrame(() => {
               el.selectionStart = el.selectionEnd = selectionStart + 2;
             });
@@ -696,13 +774,17 @@ export default function PolicyEditor({ agentId, bundle }: { agentId: string; bun
           <p className="text-xs font-medium">Save this policy for {agentId}?</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Current</div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                Current
+              </div>
               <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
                 {baseline.trim() || "(none)"}
               </pre>
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">New</div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                New
+              </div>
               <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
                 {pending.trim()}
               </pre>

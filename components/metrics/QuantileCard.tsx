@@ -14,7 +14,9 @@ export default function QuantileCard({
   }
   return (
     <div className="border border-gray-200 rounded-md p-4 bg-white">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{label}</div>
+      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        {label}
+      </div>
       <div className="flex gap-4 text-sm">
         <div>
           p50 <span className="font-medium">{fmt(p50)}</span>

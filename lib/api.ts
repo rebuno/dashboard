@@ -65,7 +65,10 @@ export interface Agent {
 }
 
 async function request(method: string, path: string, body?: unknown) {
-  const opts: RequestInit = { method, headers: { "Content-Type": "application/json" } };
+  const opts: RequestInit = {
+    method,
+    headers: { "Content-Type": "application/json" },
+  };
   if (body !== undefined) opts.body = JSON.stringify(body);
   const resp = await fetch(path, opts);
   if (resp.status === 204) return undefined;
@@ -98,11 +101,18 @@ export async function listExecutions(params?: {
   if (params?.cursor) qs.set("cursor", params.cursor);
   if (params?.limit != null) qs.set("limit", String(params.limit));
   const query = qs.toString();
-  const data = await request("GET", `/api/v0/executions${query ? `?${query}` : ""}`);
+  const data = await request(
+    "GET",
+    `/api/v0/executions${query ? `?${query}` : ""}`,
+  );
   return { executions: data?.executions ?? [], next_cursor: data?.next_cursor };
 }
 
-export async function createExecution(agentId: string, input: unknown, agentVersion?: string): Promise<Execution> {
+export async function createExecution(
+  agentId: string,
+  input: unknown,
+  agentVersion?: string,
+): Promise<Execution> {
   return request("POST", "/api/v0/executions", {
     agent_id: agentId,
     input,
@@ -118,21 +128,37 @@ export async function cancelExecution(id: string): Promise<void> {
   await request("POST", `/api/v0/executions/${encodeURIComponent(id)}/cancel`);
 }
 
-export async function getEvents(executionId: string, afterSeq = 0, limit = 200): Promise<Event[]> {
-  const qs = new URLSearchParams({ after_seq: String(afterSeq), limit: String(limit) });
-  const data = await request("GET", `/api/v0/executions/${encodeURIComponent(executionId)}/events?${qs}`);
+export async function getEvents(
+  executionId: string,
+  afterSeq = 0,
+  limit = 200,
+): Promise<Event[]> {
+  const qs = new URLSearchParams({
+    after_seq: String(afterSeq),
+    limit: String(limit),
+  });
+  const data = await request(
+    "GET",
+    `/api/v0/executions/${encodeURIComponent(executionId)}/events?${qs}`,
+  );
   return data ?? [];
 }
 
 export async function listSteps(executionId: string): Promise<Step[]> {
-  const data = await request("GET", `/api/v0/executions/${encodeURIComponent(executionId)}/steps`);
+  const data = await request(
+    "GET",
+    `/api/v0/executions/${encodeURIComponent(executionId)}/steps`,
+  );
   return data ?? [];
 }
 
-export async function getStep(executionId: string, stepId: string): Promise<Step> {
+export async function getStep(
+  executionId: string,
+  stepId: string,
+): Promise<Step> {
   return request(
     "GET",
-    `/api/v0/executions/${encodeURIComponent(executionId)}/steps/${encodeURIComponent(stepId)}`
+    `/api/v0/executions/${encodeURIComponent(executionId)}/steps/${encodeURIComponent(stepId)}`,
   );
 }
 
@@ -145,12 +171,26 @@ export async function getApproval(id: string): Promise<Approval> {
   return request("GET", `/api/v0/approvals/${encodeURIComponent(id)}`);
 }
 
-export async function grantApproval(id: string, decidedBy: string, rationale?: string): Promise<void> {
-  await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/grant`, { decided_by: decidedBy, rationale });
+export async function grantApproval(
+  id: string,
+  decidedBy: string,
+  rationale?: string,
+): Promise<void> {
+  await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/grant`, {
+    decided_by: decidedBy,
+    rationale,
+  });
 }
 
-export async function denyApproval(id: string, decidedBy: string, rationale?: string): Promise<void> {
-  await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/deny`, { decided_by: decidedBy, rationale });
+export async function denyApproval(
+  id: string,
+  decidedBy: string,
+  rationale?: string,
+): Promise<void> {
+  await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/deny`, {
+    decided_by: decidedBy,
+    rationale,
+  });
 }
 
 export async function listAgents(): Promise<Agent[]> {
@@ -158,14 +198,27 @@ export async function listAgents(): Promise<Agent[]> {
   return data ?? [];
 }
 
-export async function registerAgent(id: string, webhookUrl: string, secret: string): Promise<Agent> {
-  return request("POST", "/api/v0/agents", { id, webhook_url: webhookUrl, secret });
+export async function registerAgent(
+  id: string,
+  webhookUrl: string,
+  secret: string,
+): Promise<Agent> {
+  return request("POST", "/api/v0/agents", {
+    id,
+    webhook_url: webhookUrl,
+    secret,
+  });
 }
 
 export async function deleteAgent(id: string): Promise<void> {
   await request("DELETE", `/api/v0/agents/${encodeURIComponent(id)}`);
 }
 
-export async function loadPolicy(agentId: string, bundle: string): Promise<void> {
-  await request("POST", `/api/v0/policies/${encodeURIComponent(agentId)}`, { bundle });
+export async function loadPolicy(
+  agentId: string,
+  bundle: string,
+): Promise<void> {
+  await request("POST", `/api/v0/policies/${encodeURIComponent(agentId)}`, {
+    bundle,
+  });
 }

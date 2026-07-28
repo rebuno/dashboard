@@ -13,7 +13,10 @@ interface MetricsResponse {
   counters: Record<string, number | null>;
   gauges: { queueDepth: number | null };
   breakdowns: Record<string, Record<string, number>>;
-  quantiles: Record<string, { p50: number | null; p95: number | null; p99: number | null }>;
+  quantiles: Record<
+    string,
+    { p50: number | null; p95: number | null; p99: number | null }
+  >;
 }
 
 const EMPTY_QUANTILES = { p50: null, p95: null, p99: null };
@@ -31,7 +34,8 @@ export default function MetricsPage() {
       const resp = await fetch(`/api/metrics/query?range=${range}`);
       const body = await resp.json();
       if (requested.current !== range) return;
-      if (!resp.ok) throw new Error(body.error || `Metrics fetch failed: ${resp.status}`);
+      if (!resp.ok)
+        throw new Error(body.error || `Metrics fetch failed: ${resp.status}`);
       setData(body);
       setError(null);
     } catch (e) {
@@ -53,7 +57,9 @@ export default function MetricsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Metrics</h1>
         {data?.source === "kernel" ? (
-          <span className="text-xs text-gray-500">since kernel start · no PROMETHEUS_URL</span>
+          <span className="text-xs text-gray-500">
+            since kernel start · no PROMETHEUS_URL
+          </span>
         ) : (
           <div className="flex gap-1">
             {METRICS_RANGES.map((r) => (
@@ -78,19 +84,55 @@ export default function MetricsPage() {
 
       {data && (
         <div className="grid grid-cols-2 gap-4">
-          <CounterCard label="Executions Created" value={data.counters.executionsCreated} />
-          <CounterCard label="Queue Depth (now)" value={data.gauges.queueDepth} />
-          <CounterCard label="Dispatches Reclaimed" value={data.counters.dispatchesReclaimed} />
-          <BreakdownBars label="Executions Completed" data={data.breakdowns.executionsCompleted ?? {}} />
-          <BreakdownBars label="Steps Submitted" data={data.breakdowns.stepsSubmitted ?? {}} />
+          <CounterCard
+            label="Executions Created"
+            value={data.counters.executionsCreated}
+          />
+          <CounterCard
+            label="Queue Depth (now)"
+            value={data.gauges.queueDepth}
+          />
+          <CounterCard
+            label="Dispatches Reclaimed"
+            value={data.counters.dispatchesReclaimed}
+          />
+          <BreakdownBars
+            label="Executions Completed"
+            data={data.breakdowns.executionsCompleted ?? {}}
+          />
+          <BreakdownBars
+            label="Steps Submitted"
+            data={data.breakdowns.stepsSubmitted ?? {}}
+          />
           <BreakdownBars label="Replay" data={data.breakdowns.replay ?? {}} />
-          <BreakdownBars label="Dispatch Outcomes" data={data.breakdowns.dispatchOutcomes ?? {}} />
-          <BreakdownBars label="Policy Decisions" data={data.breakdowns.policyDecisions ?? {}} />
-          <BreakdownBars label="Approval Outcomes" data={data.breakdowns.approvalOutcomes ?? {}} />
-          <BreakdownBars label="Rate Limit" data={data.breakdowns.rateLimit ?? {}} />
-          <BreakdownBars label="Worker Errors" data={data.breakdowns.workerErrors ?? {}} />
-          <QuantileCard label="Dispatch Latency" {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)} />
-          <QuantileCard label="Policy Evaluation Latency" {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)} />
+          <BreakdownBars
+            label="Dispatch Outcomes"
+            data={data.breakdowns.dispatchOutcomes ?? {}}
+          />
+          <BreakdownBars
+            label="Policy Decisions"
+            data={data.breakdowns.policyDecisions ?? {}}
+          />
+          <BreakdownBars
+            label="Approval Outcomes"
+            data={data.breakdowns.approvalOutcomes ?? {}}
+          />
+          <BreakdownBars
+            label="Rate Limit"
+            data={data.breakdowns.rateLimit ?? {}}
+          />
+          <BreakdownBars
+            label="Worker Errors"
+            data={data.breakdowns.workerErrors ?? {}}
+          />
+          <QuantileCard
+            label="Dispatch Latency"
+            {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)}
+          />
+          <QuantileCard
+            label="Policy Evaluation Latency"
+            {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)}
+          />
         </div>
       )}
     </div>

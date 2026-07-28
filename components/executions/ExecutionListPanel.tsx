@@ -9,7 +9,15 @@ import { EXECUTION_LIST_POLL_INTERVAL } from "@/lib/constants";
 import StatusBadge from "@/components/StatusBadge";
 import CreateExecutionForm from "@/components/executions/CreateExecutionForm";
 
-const STATUS_OPTIONS = ["", "pending", "running", "blocked", "completed", "failed", "cancelled"];
+const STATUS_OPTIONS = [
+  "",
+  "pending",
+  "running",
+  "blocked",
+  "completed",
+  "failed",
+  "cancelled",
+];
 
 export default function ExecutionListPanel() {
   const pathname = usePathname();
@@ -21,7 +29,9 @@ export default function ExecutionListPanel() {
 
   const load = useCallback(async () => {
     try {
-      const page = await listExecutions(statusFilter ? { status: statusFilter } : undefined);
+      const page = await listExecutions(
+        statusFilter ? { status: statusFilter } : undefined,
+      );
       setExecutions(page.executions);
       setError(null);
     } catch (e) {
@@ -37,7 +47,9 @@ export default function ExecutionListPanel() {
     <div className="flex flex-col h-full min-h-0">
       <CreateExecutionForm onCreated={() => setRefreshNonce((n) => n + 1)} />
       <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Executions</span>
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          Executions
+        </span>
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -68,11 +80,14 @@ export default function ExecutionListPanel() {
               className={`block px-4 py-3 border-b border-gray-100 ${active ? "bg-blue-50" : "hover:bg-gray-50"}`}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
-                <code className="text-xs text-gray-600 truncate">{exec.id}</code>
+                <code className="text-xs text-gray-600 truncate">
+                  {exec.id}
+                </code>
                 <StatusBadge status={exec.status} />
               </div>
               <div className="text-xs text-gray-400">
-                {exec.agent_id} · {new Date(exec.created_at).toLocaleTimeString()}
+                {exec.agent_id} ·{" "}
+                {new Date(exec.created_at).toLocaleTimeString()}
               </div>
             </Link>
           );

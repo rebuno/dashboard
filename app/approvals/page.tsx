@@ -14,7 +14,10 @@ export default function ApprovalsPage() {
   const load = useCallback(async () => {
     try {
       const data = await listPendingApprovals();
-      data.sort((a, b) => new Date(a.timeout_at).getTime() - new Date(b.timeout_at).getTime());
+      data.sort(
+        (a, b) =>
+          new Date(a.timeout_at).getTime() - new Date(b.timeout_at).getTime(),
+      );
       setApprovals(data);
       setError(null);
     } catch (e) {
@@ -31,7 +34,9 @@ export default function ApprovalsPage() {
       <h1 className="text-lg font-semibold">Approvals</h1>
       {loading && <p className="text-sm text-gray-400">Loading…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!loading && !error && approvals.length === 0 && <p className="text-sm text-gray-400">No pending approvals</p>}
+      {!loading && !error && approvals.length === 0 && (
+        <p className="text-sm text-gray-400">No pending approvals</p>
+      )}
       <div className="space-y-3">
         {approvals.map((a) => (
           <ApprovalCard key={a.id} approval={a} onDecided={load} />

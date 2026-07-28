@@ -51,7 +51,11 @@ describe("parseBundle", () => {
   it("parses the real shell.yaml example", () => {
     const d = ok(SHELL_BUNDLE);
     expect(d.defaultAction).toBe("deny");
-    expect(d.rules.map((r) => r.id)).toEqual(["allow-llm", "allow-safe-shell", "approve-other-shell"]);
+    expect(d.rules.map((r) => r.id)).toEqual([
+      "allow-llm",
+      "allow-safe-shell",
+      "approve-other-shell",
+    ]);
     expect(d.rules[0].stepKind).toBe("llm_call");
     expect(d.rules[1].targets).toEqual(["shell_exec"]);
     expect(d.rules[1].args[0]).toMatchObject({ key: "command", op: "regex" });
@@ -72,7 +76,9 @@ rules:
   });
 
   it("parses flow-style mappings used in the docs", () => {
-    const d = ok(`rules:\n  - id: a\n    priority: 5\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`);
+    const d = ok(
+      `rules:\n  - id: a\n    priority: 5\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
+    );
     expect(d.rules[0].stepKind).toBe("llm_call");
   });
 
@@ -92,7 +98,11 @@ rules:
         timeout: 5m
         message: review please
 `);
-    expect(d.rules[0]).toMatchObject({ approvers: ["alice", "bob"], timeout: "5m", message: "review please" });
+    expect(d.rules[0]).toMatchObject({
+      approvers: ["alice", "bob"],
+      timeout: "5m",
+      message: "review please",
+    });
   });
 
   it("reads rate_limit, defaulting scope and limiter-error to the engine's own defaults", () => {
@@ -115,25 +125,62 @@ rules:
         per_what: global
         on_limiter_error: deny
 `);
-    expect(d.rules[0].rateLimit).toEqual({ maxCalls: "5", window: "1m", perWhat: "execution", onLimiterError: "allow" });
-    expect(d.rules[1].rateLimit).toEqual({ maxCalls: "1", window: "1h", perWhat: "global", onLimiterError: "deny" });
+    expect(d.rules[0].rateLimit).toEqual({
+      maxCalls: "5",
+      window: "1m",
+      perWhat: "execution",
+      onLimiterError: "allow",
+    });
+    expect(d.rules[1].rateLimit).toEqual({
+      maxCalls: "1",
+      window: "1h",
+      perWhat: "global",
+      onLimiterError: "deny",
+    });
   });
 
   // Falling back to the raw editor is safe; silently dropping a rule is not.
   it.each([
     ["unknown root key", "default_action: deny\nbogus: 1\nrules: []\n"],
-    ["unknown when key", "rules:\n  - id: a\n    when: { tool: x }\n    then: { decision: allow }\n"],
-    ["unknown then key", "rules:\n  - id: a\n    then: { decision: allow, retry: 3 }\n"],
-    ["unknown rate_limit key", "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, burst: 2 } }\n"],
+    [
+      "unknown when key",
+      "rules:\n  - id: a\n    when: { tool: x }\n    then: { decision: allow }\n",
+    ],
+    [
+      "unknown then key",
+      "rules:\n  - id: a\n    then: { decision: allow, retry: 3 }\n",
+    ],
+    [
+      "unknown rate_limit key",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, burst: 2 } }\n",
+    ],
     // yaml.v3 reads a bare number into time.Duration as nanoseconds, so `60`
     // means 60ns. Reinterpreting that as a minute would be a silent rewrite.
-    ["numeric rate_limit window", "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 60 } }\n"],
-    ["unknown per_what", "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, per_what: user } }\n"],
-    ["unknown on_limiter_error", "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, on_limiter_error: retry } }\n"],
-    ["unknown arg op", "rules:\n  - id: a\n    when:\n      arguments:\n        c: { starts_with: rm }\n    then: { decision: allow }\n"],
-    ["target and targets together", "rules:\n  - id: a\n    when: { target: x, targets: [y] }\n    then: { decision: allow }\n"],
+    [
+      "numeric rate_limit window",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 60 } }\n",
+    ],
+    [
+      "unknown per_what",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, per_what: user } }\n",
+    ],
+    [
+      "unknown on_limiter_error",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, on_limiter_error: retry } }\n",
+    ],
+    [
+      "unknown arg op",
+      "rules:\n  - id: a\n    when:\n      arguments:\n        c: { starts_with: rm }\n    then: { decision: allow }\n",
+    ],
+    [
+      "target and targets together",
+      "rules:\n  - id: a\n    when: { target: x, targets: [y] }\n    then: { decision: allow }\n",
+    ],
     ["bad decision", "rules:\n  - id: a\n    then: { decision: maybe }\n"],
-    ["bad step_kind", "rules:\n  - id: a\n    when: { step_kind: rpc }\n    then: { decision: allow }\n"],
+    [
+      "bad step_kind",
+      "rules:\n  - id: a\n    when: { step_kind: rpc }\n    then: { decision: allow }\n",
+    ],
     ["malformed yaml", "rules: [\n"],
   ])("rejects rather than mangles: %s", (_name, text) => {
     expect(parseBundle(text).ok).toBe(false);
@@ -148,7 +195,8 @@ describe("serializeDraft", () => {
 
   it("preserves the regex exactly through a round-trip", () => {
     const original = ok(SHELL_BUNDLE).rules[1].args[0].value;
-    const reparsed = ok(serializeDraft(ok(SHELL_BUNDLE))).rules[1].args[0].value;
+    const reparsed = ok(serializeDraft(ok(SHELL_BUNDLE))).rules[1].args[0]
+      .value;
     expect(reparsed).toBe(original);
     expect(reparsed).toContain("\\s*(ls|cat");
   });
@@ -176,14 +224,25 @@ describe("serializeDraft", () => {
   });
 
   it("emits target for one value and targets for several", () => {
-    expect(serializeDraft({ defaultAction: "deny", rules: [rule({ id: "a", targets: ["x"] })] })).toContain("target: x");
-    const many = serializeDraft({ defaultAction: "deny", rules: [rule({ id: "a", targets: ["x", "y"] })] });
+    expect(
+      serializeDraft({
+        defaultAction: "deny",
+        rules: [rule({ id: "a", targets: ["x"] })],
+      }),
+    ).toContain("target: x");
+    const many = serializeDraft({
+      defaultAction: "deny",
+      rules: [rule({ id: "a", targets: ["x", "y"] })],
+    });
     expect(many).toContain("targets:");
     expect(ok(many).rules[0].targets).toEqual(["x", "y"]);
   });
 
   it("omits when for a catch-all rule and drops approval_config unless approving", () => {
-    const out = serializeDraft({ defaultAction: "deny", rules: [rule({ id: "a", approvers: ["x"] })] });
+    const out = serializeDraft({
+      defaultAction: "deny",
+      rules: [rule({ id: "a", approvers: ["x"] })],
+    });
     expect(out).not.toContain("when:");
     expect(out).not.toContain("approval_config");
   });
@@ -191,7 +250,17 @@ describe("serializeDraft", () => {
   it("round-trips a rate limit and omits the two engine defaults", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
-      rules: [rule({ id: "a", rateLimit: { maxCalls: "5", window: "1m", perWhat: "execution", onLimiterError: "allow" } })],
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "5",
+            window: "1m",
+            perWhat: "execution",
+            onLimiterError: "allow",
+          },
+        }),
+      ],
     };
     const out = serializeDraft(d);
     expect(out).not.toContain("per_what");
@@ -204,16 +273,37 @@ describe("serializeDraft", () => {
   it("emits a non-default scope and limiter-error", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
-      rules: [rule({ id: "a", rateLimit: { maxCalls: "1", window: "1h", perWhat: "agent", onLimiterError: "deny" } })],
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "1",
+            window: "1h",
+            perWhat: "agent",
+            onLimiterError: "deny",
+          },
+        }),
+      ],
     };
-    expect(ok(serializeDraft(d)).rules[0].rateLimit).toEqual(d.rules[0].rateLimit);
+    expect(ok(serializeDraft(d)).rules[0].rateLimit).toEqual(
+      d.rules[0].rateLimit,
+    );
   });
 
   it("keeps a rate limit on a non-allow rule — the engine checks it before the decision", () => {
     const d: PolicyDraft = {
       defaultAction: "allow",
       rules: [
-        rule({ id: "a", decision: "deny", rateLimit: { maxCalls: "2", window: "1m", perWhat: "execution", onLimiterError: "allow" } }),
+        rule({
+          id: "a",
+          decision: "deny",
+          rateLimit: {
+            maxCalls: "2",
+            window: "1m",
+            perWhat: "execution",
+            onLimiterError: "allow",
+          },
+        }),
       ],
     };
     expect(serializeDraft(d)).toContain("rate_limit");
@@ -243,20 +333,35 @@ describe("validateDraft", () => {
 
   it("blocks a rule with no id", () => {
     const r = rule({ id: "" });
-    expect(validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0]).toMatch(/id/);
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/id/);
   });
 
   // matchArguments skips an empty constraint, so this widens the rule silently.
   it("blocks an empty argument value", () => {
-    const r = rule({ id: "a", args: [{ uid: "1", key: "cmd", op: "equals", value: "", values: [] }] });
-    expect(validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0]).toMatch(/needs a value/);
+    const r = rule({
+      id: "a",
+      args: [{ uid: "1", key: "cmd", op: "equals", value: "", values: [] }],
+    });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/needs a value/);
   });
 
   it("blocks an empty condition row and a bad duration", () => {
     const empty = rule({ id: "a", targets: [] });
-    expect(validateDraft({ defaultAction: "deny", rules: [empty] })[empty.uid]).toHaveLength(1);
-    const bad = rule({ id: "b", decision: "require_approval", timeout: "5 minutes" });
-    expect(validateDraft({ defaultAction: "deny", rules: [bad] })[bad.uid][0]).toMatch(/not a duration/);
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [empty] })[empty.uid],
+    ).toHaveLength(1);
+    const bad = rule({
+      id: "b",
+      decision: "require_approval",
+      timeout: "5 minutes",
+    });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [bad] })[bad.uid][0],
+    ).toMatch(/not a duration/);
   });
 
   it("accepts Go compound durations", () => {
@@ -274,13 +379,27 @@ describe("validateDraft", () => {
   ])("blocks a rate limit with %s", (_name, over, want) => {
     const r = rule({
       id: "a",
-      rateLimit: { perWhat: "execution", onLimiterError: "allow", ...over } as RuleDraft["rateLimit"],
+      rateLimit: {
+        perWhat: "execution",
+        onLimiterError: "allow",
+        ...over,
+      } as RuleDraft["rateLimit"],
     });
-    expect(validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0]).toMatch(want);
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(want);
   });
 
   it("accepts a complete rate limit", () => {
-    const r = rule({ id: "a", rateLimit: { maxCalls: "5", window: "1m", perWhat: "agent", onLimiterError: "deny" } });
+    const r = rule({
+      id: "a",
+      rateLimit: {
+        maxCalls: "5",
+        window: "1m",
+        perWhat: "agent",
+        onLimiterError: "deny",
+      },
+    });
     expect(validateDraft({ defaultAction: "deny", rules: [r] })).toEqual({});
   });
 });
@@ -292,7 +411,11 @@ describe("lintDraft", () => {
 
   it("flags rules shadowed by an earlier catch-all", () => {
     const catchAll = rule({ id: "allow-all" });
-    const dead = rule({ id: "deny-shell", targets: ["shell_exec"], decision: "deny" });
+    const dead = rule({
+      id: "deny-shell",
+      targets: ["shell_exec"],
+      decision: "deny",
+    });
     const w = lintDraft({ defaultAction: "deny", rules: [catchAll, dead] });
     expect(w[catchAll.uid][0]).toMatch(/never run/);
     expect(w[dead.uid][0]).toMatch(/Never runs/);
@@ -300,7 +423,12 @@ describe("lintDraft", () => {
 
   it("does not flag a catch-all that is last", () => {
     const catchAll = rule({ id: "fallback" });
-    expect(lintDraft({ defaultAction: "deny", rules: [rule({ id: "a", targets: ["x"] }), catchAll] })).toEqual({});
+    expect(
+      lintDraft({
+        defaultAction: "deny",
+        rules: [rule({ id: "a", targets: ["x"] }), catchAll],
+      }),
+    ).toEqual({});
   });
 
   it("flags identical conditions and duplicate ids", () => {
@@ -313,25 +441,46 @@ describe("lintDraft", () => {
 
   // ScopeKey is rule_id + scope, so a duplicate id silently merges two buckets.
   it("says so when duplicate ids would share a rate-limit bucket", () => {
-    const a = rule({ id: "dup", targets: ["x"], rateLimit: { maxCalls: "5", window: "1m", perWhat: "execution", onLimiterError: "allow" } });
+    const a = rule({
+      id: "dup",
+      targets: ["x"],
+      rateLimit: {
+        maxCalls: "5",
+        window: "1m",
+        perWhat: "execution",
+        onLimiterError: "allow",
+      },
+    });
     const b = rule({ id: "dup", targets: ["y"] });
     const w = lintDraft({ defaultAction: "deny", rules: [a, b] });
-    expect(w[b.uid].some((m) => /share one rate-limit bucket/.test(m))).toBe(true);
+    expect(w[b.uid].some((m) => /share one rate-limit bucket/.test(m))).toBe(
+      true,
+    );
   });
 
   // The real footgun: dragging the broad approval rule above the narrow allow
   // rule means safe commands can never be auto-allowed again.
   it("flags a narrower rule shadowed by a broader one on the same target", () => {
-    const broad = rule({ id: "approve-other-shell", targets: ["shell_exec"], decision: "require_approval" });
+    const broad = rule({
+      id: "approve-other-shell",
+      targets: ["shell_exec"],
+      decision: "require_approval",
+    });
     const narrow = rule({
       id: "allow-safe-shell",
       targets: ["shell_exec"],
-      args: [{ uid: "1", key: "command", op: "regex", value: "^ls", values: [] }],
+      args: [
+        { uid: "1", key: "command", op: "regex", value: "^ls", values: [] },
+      ],
     });
     const w = lintDraft({ defaultAction: "deny", rules: [broad, narrow] });
-    expect(w[narrow.uid][0]).toMatch(/Never runs — rule 1 \("approve-other-shell"\)/);
+    expect(w[narrow.uid][0]).toMatch(
+      /Never runs — rule 1 \("approve-other-shell"\)/,
+    );
     // …and the correct order is silent.
-    expect(lintDraft({ defaultAction: "deny", rules: [narrow, broad] })).toEqual({});
+    expect(
+      lintDraft({ defaultAction: "deny", rules: [narrow, broad] }),
+    ).toEqual({});
   });
 
   it("does not flag rules that merely overlap", () => {
@@ -345,6 +494,8 @@ describe("lintDraft", () => {
   it("stays quiet on glob shadowing rather than guess", () => {
     const glob = rule({ id: "a", targets: ["fs_*"] });
     const exact = rule({ id: "b", targets: ["fs_write"], decision: "deny" });
-    expect(lintDraft({ defaultAction: "deny", rules: [glob, exact] })).toEqual({});
+    expect(lintDraft({ defaultAction: "deny", rules: [glob, exact] })).toEqual(
+      {},
+    );
   });
 });

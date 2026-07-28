@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { createExecution } from "@/lib/api";
 
-export default function CreateExecutionForm({ onCreated }: { onCreated: () => void }) {
+export default function CreateExecutionForm({
+  onCreated,
+}: {
+  onCreated: () => void;
+}) {
   const [agentId, setAgentId] = useState("");
   const [input, setInput] = useState("{}");
   const [expanded, setExpanded] = useState(false);
@@ -28,7 +32,9 @@ export default function CreateExecutionForm({ onCreated }: { onCreated: () => vo
       setInput("{}");
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create execution");
+      setError(
+        err instanceof Error ? err.message : "Failed to create execution",
+      );
     } finally {
       setLoading(false);
     }
@@ -45,7 +51,9 @@ export default function CreateExecutionForm({ onCreated }: { onCreated: () => vo
       {expanded && (
         <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Agent ID</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Agent ID
+            </label>
             <input
               type="text"
               value={agentId}
@@ -56,7 +64,9 @@ export default function CreateExecutionForm({ onCreated }: { onCreated: () => vo
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Input (JSON)</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Input (JSON)
+            </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

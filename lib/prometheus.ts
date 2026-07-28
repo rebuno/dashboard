@@ -42,7 +42,11 @@ export function parsePrometheusText(text: string): Sample[] {
   return samples;
 }
 
-export function groupByLabel(samples: Sample[], metricName: string, labelKey: string): Record<string, number> {
+export function groupByLabel(
+  samples: Sample[],
+  metricName: string,
+  labelKey: string,
+): Record<string, number> {
   const result: Record<string, number> = {};
   for (const s of samples) {
     if (s.name !== metricName) continue;
@@ -52,15 +56,25 @@ export function groupByLabel(samples: Sample[], metricName: string, labelKey: st
   return result;
 }
 
-export function singleValue(samples: Sample[], metricName: string): number | null {
+export function singleValue(
+  samples: Sample[],
+  metricName: string,
+): number | null {
   const match = samples.find((s) => s.name === metricName);
   return match ? match.value : null;
 }
 
-export function histogramQuantile(samples: Sample[], baseMetricName: string, quantile: number): number | null {
+export function histogramQuantile(
+  samples: Sample[],
+  baseMetricName: string,
+  quantile: number,
+): number | null {
   const buckets = samples
     .filter((s) => s.name === `${baseMetricName}_bucket`)
-    .map((s) => ({ le: s.labels.le === "+Inf" ? Infinity : parseFloat(s.labels.le), count: s.value }))
+    .map((s) => ({
+      le: s.labels.le === "+Inf" ? Infinity : parseFloat(s.labels.le),
+      count: s.value,
+    }))
     .filter((b) => !Number.isNaN(b.le))
     .sort((a, b) => a.le - b.le);
 

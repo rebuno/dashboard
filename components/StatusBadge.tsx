@@ -10,7 +10,9 @@ const STATUS_STYLES: Record<string, string> = {
 export default function StatusBadge({ status }: { status: string }) {
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide ${style}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide ${style}`}
+    >
       {status}
     </span>
   );

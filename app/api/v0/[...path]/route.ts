@@ -36,7 +36,9 @@ async function proxy(req: NextRequest) {
     }
     return new NextResponse(data, {
       status: resp.status,
-      headers: { "Content-Type": resp.headers.get("Content-Type") || "application/json" },
+      headers: {
+        "Content-Type": resp.headers.get("Content-Type") || "application/json",
+      },
     });
   } catch (err) {
     console.error(`Failed to proxy ${target}`, err);

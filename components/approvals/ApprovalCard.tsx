@@ -2,11 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getStep, grantApproval, denyApproval, type Approval, type Step } from "@/lib/api";
+import {
+  getStep,
+  grantApproval,
+  denyApproval,
+  type Approval,
+  type Step,
+} from "@/lib/api";
 import { getApproverName, setApproverName } from "@/lib/storage";
 import JsonBlock from "@/components/JsonBlock";
 
-export default function ApprovalCard({ approval, onDecided }: { approval: Approval; onDecided: () => void }) {
+export default function ApprovalCard({
+  approval,
+  onDecided,
+}: {
+  approval: Approval;
+  onDecided: () => void;
+}) {
   const [step, setStep] = useState<Step | null>(null);
   const [name, setName] = useState("");
   const [rationale, setRationale] = useState("");
@@ -45,19 +57,30 @@ export default function ApprovalCard({ approval, onDecided }: { approval: Approv
   return (
     <div className="border border-gray-200 rounded-md p-4 space-y-2 bg-white">
       <div className="flex items-center justify-between">
-        <Link href={`/executions/${approval.execution_id}`} className="text-xs text-blue-600 hover:underline">
+        <Link
+          href={`/executions/${approval.execution_id}`}
+          className="text-xs text-blue-600 hover:underline"
+        >
           {approval.execution_id}
         </Link>
         <span className="text-xs text-gray-400">
-          {minutesRemaining <= 0 ? "Expired" : `${minutesRemaining}m until timeout`}
+          {minutesRemaining <= 0
+            ? "Expired"
+            : `${minutesRemaining}m until timeout`}
         </span>
       </div>
-      <div className="text-sm font-medium">{step ? `${step.kind}: ${step.target}` : `step ${approval.step_id}`}</div>
+      <div className="text-sm font-medium">
+        {step ? `${step.kind}: ${step.target}` : `step ${approval.step_id}`}
+      </div>
       {step && <JsonBlock label="Args" value={step.args} />}
-      {approval.message && <p className="text-sm text-gray-600">{approval.message}</p>}
+      {approval.message && (
+        <p className="text-sm text-gray-600">{approval.message}</p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Your name</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Your name
+          </label>
           <input
             type="text"
             value={name}
@@ -66,7 +89,9 @@ export default function ApprovalCard({ approval, onDecided }: { approval: Approv
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Rationale (optional)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Rationale (optional)
+          </label>
           <input
             type="text"
             value={rationale}
