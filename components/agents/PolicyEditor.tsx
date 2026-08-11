@@ -720,7 +720,9 @@ export default function PolicyEditor({
           {/* The default is literally what happens after the last rule, so it
               lives at the bottom of the same stack. */}
           <div className="flex items-center gap-2 border border-gray-200 rounded-md bg-gray-50 px-3 py-2">
-            <span className="text-xs text-gray-500">If no rule matches →</span>
+            <span className="text-xs text-gray-500">
+              If no rule matches a tool or model call →
+            </span>
             <select
               value={draft.defaultAction}
               onChange={(e) =>

@@ -2,14 +2,14 @@
 import { dump, load } from "js-yaml";
 
 export type Decision = "allow" | "deny" | "require_approval";
-export type StepKind = "tool_call" | "llm_call";
+export type StepKind = "tool_call" | "llm_call" | "local";
 export type ArgOp = "equals" | "contains" | "one_of" | "regex";
 export type DefaultAction = "allow" | "deny";
 export type PerWhat = "execution" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
 
 export const DECISIONS: Decision[] = ["allow", "deny", "require_approval"];
-export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call"];
+export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
 export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
@@ -316,10 +316,10 @@ function toRule(
   let stepKind: StepKind | null = null;
   if (when.step_kind !== undefined) {
     const sk = asString(when.step_kind, `${where} step_kind`);
-    if (sk !== "tool_call" && sk !== "llm_call") {
-      throw new Error(`${where}: step_kind must be tool_call or llm_call`);
+    if (!(STEP_KINDS as string[]).includes(sk)) {
+      throw new Error(`${where}: step_kind must be one of ${STEP_KINDS.join(", ")}`);
     }
-    stepKind = sk;
+    stepKind = sk as StepKind;
   }
 
   // `target` and `targets` together AND in the engine; one token list can only

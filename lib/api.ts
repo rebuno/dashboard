@@ -27,7 +27,7 @@ export interface Event {
 export interface Step {
   step_id: string;
   execution_id: string;
-  kind: "tool_call" | "llm_call";
+  kind: "tool_call" | "llm_call" | "local";
   target: string;
   args_hash: string;
   occurrence: number;
