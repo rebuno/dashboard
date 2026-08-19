@@ -317,7 +317,9 @@ function toRule(
   if (when.step_kind !== undefined) {
     const sk = asString(when.step_kind, `${where} step_kind`);
     if (!(STEP_KINDS as string[]).includes(sk)) {
-      throw new Error(`${where}: step_kind must be one of ${STEP_KINDS.join(", ")}`);
+      throw new Error(
+        `${where}: step_kind must be one of ${STEP_KINDS.join(", ")}`,
+      );
     }
     stepKind = sk as StepKind;
   }
