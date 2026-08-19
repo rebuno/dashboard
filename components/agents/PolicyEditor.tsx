@@ -660,6 +660,48 @@ export default function PolicyEditor({
         </button>
       </div>
 
+      {pending !== null && (
+        <div className="border border-gray-300 rounded-md bg-white p-3 space-y-2">
+          <p className="text-xs font-medium">Save this policy for {agentId}?</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                Current
+              </div>
+              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
+                {baseline.trim() || "(none)"}
+              </pre>
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                New
+              </div>
+              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
+                {pending.trim()}
+              </pre>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="bg-blue-600 text-white rounded px-3 py-1 text-xs hover:bg-blue-700 disabled:opacity-40"
+            >
+              {saving ? "Saving…" : "Save policy"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPending(null)}
+              disabled={saving}
+              className="border border-gray-300 rounded px-3 py-1 text-xs hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {!parsed.ok && mode === "yaml" && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
           This bundle has something the block editor can&apos;t represent, so
@@ -770,48 +812,6 @@ export default function PolicyEditor({
         </p>
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
-
-      {pending !== null && (
-        <div className="border border-gray-300 rounded-md bg-white p-3 space-y-2">
-          <p className="text-xs font-medium">Save this policy for {agentId}?</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-                Current
-              </div>
-              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
-                {baseline.trim() || "(none)"}
-              </pre>
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-                New
-              </div>
-              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
-                {pending.trim()}
-              </pre>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="bg-blue-600 text-white rounded px-3 py-1 text-xs hover:bg-blue-700 disabled:opacity-40"
-            >
-              {saving ? "Saving…" : "Save policy"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPending(null)}
-              disabled={saving}
-              className="border border-gray-300 rounded px-3 py-1 text-xs hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
