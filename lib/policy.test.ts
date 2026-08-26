@@ -139,6 +139,31 @@ rules:
     });
   });
 
+  it("reads budget, defaulting on_exceed to the engine's own deny", () => {
+    const d = ok(`
+rules:
+  - id: a
+    then:
+      decision: allow
+      budget:
+        max_tokens: 100000
+  - id: b
+    then:
+      decision: allow
+      budget:
+        max_tokens: 500
+        on_exceed: require_approval
+`);
+    expect(d.rules[0].budget).toEqual({
+      maxTokens: "100000",
+      onExceed: "deny",
+    });
+    expect(d.rules[1].budget).toEqual({
+      maxTokens: "500",
+      onExceed: "require_approval",
+    });
+  });
+
   // Falling back to the raw editor is safe; silently dropping a rule is not.
   it.each([
     ["unknown root key", "default_action: deny\nbogus: 1\nrules: []\n"],
@@ -167,6 +192,18 @@ rules:
     [
       "unknown on_limiter_error",
       "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, on_limiter_error: retry } }\n",
+    ],
+    [
+      "unknown budget key",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, refill: 1m } }\n",
+    ],
+    [
+      "unknown on_exceed",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, on_exceed: warn } }\n",
+    ],
+    [
+      "fractional max_tokens",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 1.5 } }\n",
     ],
     [
       "unknown arg op",
@@ -309,6 +346,33 @@ describe("serializeDraft", () => {
     expect(serializeDraft(d)).toContain("rate_limit");
   });
 
+  it("round-trips a budget and omits the default on_exceed", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({ id: "a", budget: { maxTokens: "100000", onExceed: "deny" } }),
+      ],
+    };
+    const out = serializeDraft(d);
+    expect(out).not.toContain("on_exceed");
+    // max_tokens must survive as a YAML int; a quoted "100000" fails the Go load.
+    expect(out).toContain("max_tokens: 100000");
+    expect(ok(out).rules[0].budget).toEqual(d.rules[0].budget);
+  });
+
+  it("emits a non-default on_exceed", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          budget: { maxTokens: "500", onExceed: "require_approval" },
+        }),
+      ],
+    };
+    expect(ok(serializeDraft(d)).rules[0].budget).toEqual(d.rules[0].budget);
+  });
+
   it("merges multiple constraints on one argument key back into one predicate", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
@@ -390,6 +454,18 @@ describe("validateDraft", () => {
     ).toMatch(want);
   });
 
+  // The kernel skips the check unless max_tokens is > 0.
+  it.each([
+    ["no max tokens", ""],
+    ["zero max tokens", "0"],
+    ["fractional max tokens", "2.5"],
+  ])("blocks a budget with %s", (_name, maxTokens) => {
+    const r = rule({ id: "a", budget: { maxTokens, onExceed: "deny" } });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/max tokens/);
+  });
+
   it("accepts a complete rate limit", () => {
     const r = rule({
       id: "a",
@@ -455,6 +531,19 @@ describe("lintDraft", () => {
     const w = lintDraft({ defaultAction: "deny", rules: [a, b] });
     expect(w[b.uid].some((m) => /share one rate-limit bucket/.test(m))).toBe(
       true,
+    );
+  });
+
+  // The kernel checks the budget only after the rule has decided to allow.
+  it("says a budget on a non-allow rule is ignored", () => {
+    const a = rule({
+      id: "a",
+      targets: ["x"],
+      decision: "require_approval",
+      budget: { maxTokens: "100", onExceed: "deny" },
+    });
+    expect(lintDraft({ defaultAction: "deny", rules: [a] })[a.uid][0]).toMatch(
+      /Budget is ignored/,
     );
   });
 

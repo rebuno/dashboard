@@ -7,12 +7,14 @@ export type ArgOp = "equals" | "contains" | "one_of" | "regex";
 export type DefaultAction = "allow" | "deny";
 export type PerWhat = "execution" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
+export type OnExceed = "deny" | "require_approval";
 
 export const DECISIONS: Decision[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
 export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
+export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
 
 const PRIORITY_STEP = 10;
 
@@ -22,6 +24,12 @@ export interface ArgCondition {
   op: ArgOp;
   value: string; // equals | contains | regex
   values: string[]; // one_of
+}
+
+/** maxTokens stays a string so a half-typed field is empty, not NaN. */
+export interface Budget {
+  maxTokens: string;
+  onExceed: OnExceed;
 }
 
 /** maxCalls stays a string so a half-typed field is empty, not NaN. */
@@ -46,6 +54,7 @@ export interface RuleDraft {
   timeout: string;
   message: string;
   rateLimit: RateLimit | null; // null = no rate_limit block
+  budget: Budget | null; // null = no budget block
 }
 
 export interface PolicyDraft {
@@ -76,6 +85,7 @@ export function emptyRule(): RuleDraft {
     timeout: "",
     message: "",
     rateLimit: null,
+    budget: null,
   };
 }
 
@@ -86,6 +96,10 @@ export function emptyRateLimit(): RateLimit {
     perWhat: "execution",
     onLimiterError: "allow",
   };
+}
+
+export function emptyBudget(): Budget {
+  return { maxTokens: "", onExceed: "deny" };
 }
 
 export function emptyDraft(): PolicyDraft {
@@ -149,6 +163,14 @@ function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
       rl.on_limiter_error = r.rateLimit.onLimiterError;
     then.rate_limit = rl;
   }
+  if (r.budget) {
+    const b: Record<string, unknown> = {
+      max_tokens: Number(r.budget.maxTokens),
+    };
+    // Anything but require_approval denies, so leave the deny case implicit.
+    if (r.budget.onExceed !== "deny") b.on_exceed = r.budget.onExceed;
+    then.budget = b;
+  }
 
   const out: Record<string, unknown> = {
     id: r.id.trim(),
@@ -186,8 +208,10 @@ const THEN_KEYS = new Set([
   "reason",
   "approval_config",
   "rate_limit",
+  "budget",
 ]);
 const APPROVAL_KEYS = new Set(["approvers", "timeout", "message"]);
+const BUDGET_KEYS = new Set(["max_tokens", "on_exceed"]);
 const RATE_LIMIT_KEYS = new Set([
   "max_calls",
   "window",
@@ -295,6 +319,30 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
   return { maxCalls: String(rl.max_calls), window, perWhat, onLimiterError };
 }
 
+function toBudget(raw: unknown, where: string): Budget {
+  const b = asObject(raw, `${where} budget`);
+  rejectUnknown(b, BUDGET_KEYS, `${where} budget`);
+
+  if (typeof b.max_tokens !== "number" || !Number.isInteger(b.max_tokens)) {
+    throw new Error(`${where}: budget max_tokens must be a whole number`);
+  }
+
+  let onExceed: OnExceed = "deny";
+  if (b.on_exceed !== undefined) {
+    const e = asString(b.on_exceed, `${where} budget on_exceed`);
+    // The kernel reads only require_approval and denies on everything else;
+    // don't let a typo look like a softer setting than it is.
+    if (!ON_EXCEEDS.includes(e as OnExceed)) {
+      throw new Error(
+        `${where}: budget on_exceed must be deny or require_approval`,
+      );
+    }
+    onExceed = e as OnExceed;
+  }
+
+  return { maxTokens: String(b.max_tokens), onExceed };
+}
+
 function toRule(
   raw: unknown,
   i: number,
@@ -395,6 +443,7 @@ function toRule(
         then.rate_limit === undefined
           ? null
           : toRateLimit(then.rate_limit, where),
+      budget: then.budget === undefined ? null : toBudget(then.budget, where),
     },
   };
 }
@@ -531,6 +580,18 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
           `Rate limit window "${w}" is not a duration (e.g. 1m, 1h).`,
         );
     }
+
+    // The kernel skips the budget check unless max_tokens is > 0.
+    if (r.budget) {
+      const n = Number(r.budget.maxTokens);
+      if (!r.budget.maxTokens.trim() || !Number.isInteger(n) || n < 1) {
+        push(
+          errors,
+          r.uid,
+          "Budget needs a whole max tokens of 1 or more, or the budget does nothing.",
+        );
+      }
+    }
   }
   return errors;
 }
@@ -586,6 +647,15 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
         warnings,
         r.uid,
         `Matches every step, so the ${d.rules.length - 1 - i} rule(s) below never run.`,
+      );
+    }
+
+    // The kernel checks the budget only on a rule that allows.
+    if (r.budget && r.decision !== "allow") {
+      push(
+        warnings,
+        r.uid,
+        `Budget is ignored — it only applies to a rule that allows.`,
       );
     }
 
