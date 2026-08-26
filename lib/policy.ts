@@ -37,6 +37,7 @@ export interface RateLimit {
   maxCalls: string;
   window: string;
   perWhat: PerWhat;
+  maxWait: string; // "" = refuse instead of parking the step
   onLimiterError: LimiterError;
 }
 
@@ -94,6 +95,7 @@ export function emptyRateLimit(): RateLimit {
     maxCalls: "",
     window: "",
     perWhat: "execution",
+    maxWait: "",
     onLimiterError: "allow",
   };
 }
@@ -159,6 +161,7 @@ function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
     };
     // "execution" and fail-open are the engine's defaults, so leave them implicit.
     if (r.rateLimit.perWhat !== "execution") rl.per_what = r.rateLimit.perWhat;
+    if (r.rateLimit.maxWait.trim()) rl.max_wait = r.rateLimit.maxWait.trim();
     if (r.rateLimit.onLimiterError !== "allow")
       rl.on_limiter_error = r.rateLimit.onLimiterError;
     then.rate_limit = rl;
@@ -216,6 +219,7 @@ const RATE_LIMIT_KEYS = new Set([
   "max_calls",
   "window",
   "per_what",
+  "max_wait",
   "on_limiter_error",
 ]);
 
@@ -290,6 +294,12 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
   // a numeric one goes to the raw editor rather than get silently reinterpreted.
   const window = asString(rl.window, `${where} rate_limit window`);
 
+  // Same nanosecond trap as window; unset means refuse rather than park.
+  const maxWait =
+    rl.max_wait === undefined
+      ? ""
+      : asString(rl.max_wait, `${where} rate_limit max_wait`);
+
   let perWhat: PerWhat = "execution";
   if (rl.per_what !== undefined) {
     const p = asString(rl.per_what, `${where} rate_limit per_what`);
@@ -316,7 +326,13 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
     onLimiterError = e as LimiterError;
   }
 
-  return { maxCalls: String(rl.max_calls), window, perWhat, onLimiterError };
+  return {
+    maxCalls: String(rl.max_calls),
+    window,
+    perWhat,
+    maxWait,
+    onLimiterError,
+  };
 }
 
 function toBudget(raw: unknown, where: string): Budget {
@@ -578,6 +594,14 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
           errors,
           r.uid,
           `Rate limit window "${w}" is not a duration (e.g. 1m, 1h).`,
+        );
+
+      const mw = r.rateLimit.maxWait.trim();
+      if (mw && !DURATION_RE.test(mw))
+        push(
+          errors,
+          r.uid,
+          `Max wait "${mw}" is not a duration (e.g. 30s, 5m).`,
         );
     }
 

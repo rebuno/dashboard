@@ -129,14 +129,30 @@ rules:
       maxCalls: "5",
       window: "1m",
       perWhat: "execution",
+      maxWait: "",
       onLimiterError: "allow",
     });
     expect(d.rules[1].rateLimit).toEqual({
       maxCalls: "1",
       window: "1h",
       perWhat: "global",
+      maxWait: "",
       onLimiterError: "deny",
     });
+  });
+
+  it("reads max_wait, which parks a limited step instead of refusing it", () => {
+    const d = ok(`
+rules:
+  - id: a
+    then:
+      decision: allow
+      rate_limit:
+        max_calls: 5
+        window: 1m
+        max_wait: 30s
+`);
+    expect(d.rules[0].rateLimit?.maxWait).toBe("30s");
   });
 
   it("reads budget, defaulting on_exceed to the engine's own deny", () => {
@@ -192,6 +208,12 @@ rules:
     [
       "unknown on_limiter_error",
       "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, on_limiter_error: retry } }\n",
+    ],
+    // yaml.v3 reads a bare number into time.Duration as nanoseconds, same trap
+    // as window.
+    [
+      "numeric max_wait",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, max_wait: 30 } }\n",
     ],
     [
       "unknown budget key",
@@ -294,6 +316,7 @@ describe("serializeDraft", () => {
             maxCalls: "5",
             window: "1m",
             perWhat: "execution",
+            maxWait: "",
             onLimiterError: "allow",
           },
         }),
@@ -307,6 +330,46 @@ describe("serializeDraft", () => {
     expect(ok(out).rules[0].rateLimit).toEqual(d.rules[0].rateLimit);
   });
 
+  it("omits an unset max_wait so the engine keeps refusing", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "5",
+            window: "1m",
+            perWhat: "execution",
+            maxWait: "",
+            onLimiterError: "allow",
+          },
+        }),
+      ],
+    };
+    expect(serializeDraft(d)).not.toContain("max_wait");
+  });
+
+  it("round-trips a max_wait", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "5",
+            window: "1m",
+            perWhat: "execution",
+            maxWait: "30s",
+            onLimiterError: "allow",
+          },
+        }),
+      ],
+    };
+    expect(ok(serializeDraft(d)).rules[0].rateLimit).toEqual(
+      d.rules[0].rateLimit,
+    );
+  });
+
   it("emits a non-default scope and limiter-error", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
@@ -317,6 +380,7 @@ describe("serializeDraft", () => {
             maxCalls: "1",
             window: "1h",
             perWhat: "agent",
+            maxWait: "",
             onLimiterError: "deny",
           },
         }),
@@ -338,6 +402,7 @@ describe("serializeDraft", () => {
             maxCalls: "2",
             window: "1m",
             perWhat: "execution",
+            maxWait: "",
             onLimiterError: "allow",
           },
         }),
@@ -445,6 +510,7 @@ describe("validateDraft", () => {
       id: "a",
       rateLimit: {
         perWhat: "execution",
+        maxWait: "",
         onLimiterError: "allow",
         ...over,
       } as RuleDraft["rateLimit"],
@@ -466,6 +532,22 @@ describe("validateDraft", () => {
     ).toMatch(/max tokens/);
   });
 
+  it("blocks a max wait that is not a duration", () => {
+    const r = rule({
+      id: "a",
+      rateLimit: {
+        maxCalls: "5",
+        window: "1m",
+        perWhat: "execution",
+        maxWait: "half an hour",
+        onLimiterError: "allow",
+      },
+    });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/Max wait/);
+  });
+
   it("accepts a complete rate limit", () => {
     const r = rule({
       id: "a",
@@ -473,6 +555,7 @@ describe("validateDraft", () => {
         maxCalls: "5",
         window: "1m",
         perWhat: "agent",
+        maxWait: "",
         onLimiterError: "deny",
       },
     });
@@ -524,6 +607,7 @@ describe("lintDraft", () => {
         maxCalls: "5",
         window: "1m",
         perWhat: "execution",
+        maxWait: "",
         onLimiterError: "allow",
       },
     });

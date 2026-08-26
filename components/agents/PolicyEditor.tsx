@@ -498,6 +498,20 @@ function RuleCard({
               </button>
             </div>
             <div className="flex items-center gap-2">
+              <span className={rowLabel}>Wait up to</span>
+              <input
+                value={rule.rateLimit.maxWait}
+                onChange={(e) => patchLimit({ maxWait: e.target.value })}
+                spellCheck={false}
+                placeholder="refuse right away"
+                className={`${field} font-mono w-32`}
+                aria-label="Max wait"
+              />
+              <span className="text-[10px] text-gray-400">
+                a limited step parks and retries once, instead of being refused
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className={rowLabel}>If broken</span>
               <select
                 value={rule.rateLimit.onLimiterError}
