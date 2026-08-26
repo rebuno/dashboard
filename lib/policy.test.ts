@@ -13,13 +13,11 @@ import {
 const SHELL_BUNDLE = `default_action: deny
 rules:
   - id: allow-llm
-    priority: 5
     when:
       step_kind: llm_call
     then:
       decision: allow
   - id: allow-safe-shell
-    priority: 10
     when:
       target: shell_exec
       arguments:
@@ -29,7 +27,6 @@ rules:
       decision: allow
       reason: safe read-only command
   - id: approve-other-shell
-    priority: 20
     when:
       target: shell_exec
     then:
@@ -62,22 +59,20 @@ describe("parseBundle", () => {
     expect(d.rules[2].decision).toBe("require_approval");
   });
 
-  it("orders rules by priority, not document order — list order is eval order", () => {
+  it("keeps document order — list order is eval order", () => {
     const d = ok(`
 rules:
-  - id: last
-    priority: 99
-    then: { decision: deny }
   - id: first
-    priority: 1
+    then: { decision: deny }
+  - id: second
     then: { decision: allow }
 `);
-    expect(d.rules.map((r) => r.id)).toEqual(["first", "last"]);
+    expect(d.rules.map((r) => r.id)).toEqual(["first", "second"]);
   });
 
   it("parses flow-style mappings used in the docs", () => {
     const d = ok(
-      `rules:\n  - id: a\n    priority: 5\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
+      `rules:\n  - id: a\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
     );
     expect(d.rules[0].stepKind).toBe("llm_call");
   });
@@ -90,7 +85,6 @@ rules:
     const d = ok(`
 rules:
   - id: a
-    priority: 5
     then:
       decision: require_approval
       approval_config:
@@ -109,14 +103,12 @@ rules:
     const d = ok(`
 rules:
   - id: a
-    priority: 5
     then:
       decision: allow
       rate_limit:
         max_calls: 5
         window: 1m
   - id: b
-    priority: 10
     then:
       decision: deny
       rate_limit:
@@ -260,19 +252,7 @@ describe("serializeDraft", () => {
     expect(reparsed).toContain("\\s*(ls|cat");
   });
 
-  it("derives priority from list order, ascending and unique", () => {
-    const d: PolicyDraft = {
-      defaultAction: "deny",
-      rules: [rule({ id: "a" }), rule({ id: "b" }), rule({ id: "c" })],
-    };
-    const out = parseBundle(serializeDraft(d));
-    expect(out.ok).toBe(true);
-    expect(serializeDraft(d)).toContain("priority: 10");
-    expect(serializeDraft(d)).toContain("priority: 20");
-    expect(serializeDraft(d)).toContain("priority: 30");
-  });
-
-  it("reordering rules renumbers priority so the list stays the order of evaluation", () => {
+  it("reordering rules reorders the document, which is the order of evaluation", () => {
     const d = ok(SHELL_BUNDLE);
     d.rules.reverse();
     expect(ok(serializeDraft(d)).rules.map((r) => r.id)).toEqual([

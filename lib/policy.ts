@@ -16,8 +16,6 @@ export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
 export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
 
-const PRIORITY_STEP = 10;
-
 export interface ArgCondition {
   uid: string;
   key: string;
@@ -41,7 +39,7 @@ export interface RateLimit {
   onLimiterError: LimiterError;
 }
 
-/** A rule as edited. `priority` is absent by design — it is the list index. */
+/** A rule as edited. Its position in the list is its evaluation order. */
 export interface RuleDraft {
   uid: string;
   id: string;
@@ -133,7 +131,7 @@ function argsToYaml(
   return Object.keys(out).length ? out : undefined;
 }
 
-function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
+function ruleToYaml(r: RuleDraft): Record<string, unknown> {
   const when: Record<string, unknown> = {};
   if (r.stepKind) when.step_kind = r.stepKind;
   // The engine has both `target` (string) and `targets` (list); that split is a
@@ -175,10 +173,7 @@ function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
     then.budget = b;
   }
 
-  const out: Record<string, unknown> = {
-    id: r.id.trim(),
-    priority: (index + 1) * PRIORITY_STEP,
-  };
+  const out: Record<string, unknown> = { id: r.id.trim() };
   // An omitted `when` is the zero Condition, which matches every step — same as
   // `when: {}` but without implying a constraint exists.
   if (Object.keys(when).length) out.when = when;
@@ -197,7 +192,7 @@ export function serializeDraft(d: PolicyDraft): string {
 // ------------------------------------------------------------------- parse
 
 const ROOT_KEYS = new Set(["default_action", "rules"]);
-const RULE_KEYS = new Set(["id", "priority", "when", "then"]);
+const RULE_KEYS = new Set(["id", "when", "then"]);
 const WHEN_KEYS = new Set([
   "target",
   "targets",
@@ -359,17 +354,10 @@ function toBudget(raw: unknown, where: string): Budget {
   return { maxTokens: String(b.max_tokens), onExceed };
 }
 
-function toRule(
-  raw: unknown,
-  i: number,
-): { rule: RuleDraft; priority: number } {
+function toRule(raw: unknown, i: number): RuleDraft {
   const where = `rule ${i + 1}`;
   const r = asObject(raw, where);
   rejectUnknown(r, RULE_KEYS, where);
-
-  const priority = r.priority === undefined ? 0 : Number(r.priority);
-  if (!Number.isFinite(priority))
-    throw new Error(`${where}: priority must be a number`);
 
   const when =
     r.when === undefined || r.when === null
@@ -439,28 +427,23 @@ function toRule(
   }
 
   return {
-    priority,
-    rule: {
-      uid: uid(),
-      id: r.id === undefined ? "" : asString(r.id, `${where} id`),
-      stepKind,
-      targets,
-      agentIds,
-      args,
-      decision: decision as Decision,
-      reason:
-        then.reason === undefined
-          ? ""
-          : asString(then.reason, `${where} reason`),
-      approvers,
-      timeout,
-      message,
-      rateLimit:
-        then.rate_limit === undefined
-          ? null
-          : toRateLimit(then.rate_limit, where),
-      budget: then.budget === undefined ? null : toBudget(then.budget, where),
-    },
+    uid: uid(),
+    id: r.id === undefined ? "" : asString(r.id, `${where} id`),
+    stepKind,
+    targets,
+    agentIds,
+    args,
+    decision: decision as Decision,
+    reason:
+      then.reason === undefined ? "" : asString(then.reason, `${where} reason`),
+    approvers,
+    timeout,
+    message,
+    rateLimit:
+      then.rate_limit === undefined
+        ? null
+        : toRateLimit(then.rate_limit, where),
+    budget: then.budget === undefined ? null : toBudget(then.budget, where),
   };
 }
 
@@ -493,12 +476,10 @@ export function parseBundle(text: string): ParseResult {
       root.rules === undefined || root.rules === null ? [] : root.rules;
     if (!Array.isArray(rawRules)) throw new Error("rules must be a list");
 
-    // Sort by priority so the list reads in evaluation order — the whole point.
-    const parsed = rawRules.map(toRule);
-    parsed.sort((a, b) => a.priority - b.priority);
+    // Document order is evaluation order, so the list reads top to bottom.
     return {
       ok: true,
-      draft: { defaultAction, rules: parsed.map((p) => p.rule) },
+      draft: { defaultAction, rules: rawRules.map(toRule) },
     };
   } catch (e) {
     return {
