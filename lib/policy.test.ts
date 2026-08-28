@@ -13,13 +13,11 @@ import {
 const SHELL_BUNDLE = `default_action: deny
 rules:
   - id: allow-llm
-    priority: 5
     when:
       step_kind: llm_call
     then:
       decision: allow
   - id: allow-safe-shell
-    priority: 10
     when:
       target: shell_exec
       arguments:
@@ -29,7 +27,6 @@ rules:
       decision: allow
       reason: safe read-only command
   - id: approve-other-shell
-    priority: 20
     when:
       target: shell_exec
     then:
@@ -62,22 +59,20 @@ describe("parseBundle", () => {
     expect(d.rules[2].decision).toBe("require_approval");
   });
 
-  it("orders rules by priority, not document order — list order is eval order", () => {
+  it("keeps document order — list order is eval order", () => {
     const d = ok(`
 rules:
-  - id: last
-    priority: 99
-    then: { decision: deny }
   - id: first
-    priority: 1
+    then: { decision: deny }
+  - id: second
     then: { decision: allow }
 `);
-    expect(d.rules.map((r) => r.id)).toEqual(["first", "last"]);
+    expect(d.rules.map((r) => r.id)).toEqual(["first", "second"]);
   });
 
   it("parses flow-style mappings used in the docs", () => {
     const d = ok(
-      `rules:\n  - id: a\n    priority: 5\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
+      `rules:\n  - id: a\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
     );
     expect(d.rules[0].stepKind).toBe("llm_call");
   });
@@ -90,7 +85,6 @@ rules:
     const d = ok(`
 rules:
   - id: a
-    priority: 5
     then:
       decision: require_approval
       approval_config:
@@ -109,14 +103,12 @@ rules:
     const d = ok(`
 rules:
   - id: a
-    priority: 5
     then:
       decision: allow
       rate_limit:
         max_calls: 5
         window: 1m
   - id: b
-    priority: 10
     then:
       decision: deny
       rate_limit:
@@ -129,13 +121,54 @@ rules:
       maxCalls: "5",
       window: "1m",
       perWhat: "execution",
+      maxWait: "",
       onLimiterError: "allow",
     });
     expect(d.rules[1].rateLimit).toEqual({
       maxCalls: "1",
       window: "1h",
       perWhat: "global",
+      maxWait: "",
       onLimiterError: "deny",
+    });
+  });
+
+  it("reads max_wait, which parks a limited step instead of refusing it", () => {
+    const d = ok(`
+rules:
+  - id: a
+    then:
+      decision: allow
+      rate_limit:
+        max_calls: 5
+        window: 1m
+        max_wait: 30s
+`);
+    expect(d.rules[0].rateLimit?.maxWait).toBe("30s");
+  });
+
+  it("reads budget, defaulting on_exceed to the engine's own deny", () => {
+    const d = ok(`
+rules:
+  - id: a
+    then:
+      decision: allow
+      budget:
+        max_tokens: 100000
+  - id: b
+    then:
+      decision: allow
+      budget:
+        max_tokens: 500
+        on_exceed: require_approval
+`);
+    expect(d.rules[0].budget).toEqual({
+      maxTokens: "100000",
+      onExceed: "deny",
+    });
+    expect(d.rules[1].budget).toEqual({
+      maxTokens: "500",
+      onExceed: "require_approval",
     });
   });
 
@@ -167,6 +200,24 @@ rules:
     [
       "unknown on_limiter_error",
       "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, on_limiter_error: retry } }\n",
+    ],
+    // yaml.v3 reads a bare number into time.Duration as nanoseconds, same trap
+    // as window.
+    [
+      "numeric max_wait",
+      "rules:\n  - id: a\n    then: { decision: allow, rate_limit: { max_calls: 5, window: 1m, max_wait: 30 } }\n",
+    ],
+    [
+      "unknown budget key",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, refill: 1m } }\n",
+    ],
+    [
+      "unknown on_exceed",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, on_exceed: warn } }\n",
+    ],
+    [
+      "fractional max_tokens",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 1.5 } }\n",
     ],
     [
       "unknown arg op",
@@ -201,19 +252,7 @@ describe("serializeDraft", () => {
     expect(reparsed).toContain("\\s*(ls|cat");
   });
 
-  it("derives priority from list order, ascending and unique", () => {
-    const d: PolicyDraft = {
-      defaultAction: "deny",
-      rules: [rule({ id: "a" }), rule({ id: "b" }), rule({ id: "c" })],
-    };
-    const out = parseBundle(serializeDraft(d));
-    expect(out.ok).toBe(true);
-    expect(serializeDraft(d)).toContain("priority: 10");
-    expect(serializeDraft(d)).toContain("priority: 20");
-    expect(serializeDraft(d)).toContain("priority: 30");
-  });
-
-  it("reordering rules renumbers priority so the list stays the order of evaluation", () => {
+  it("reordering rules reorders the document, which is the order of evaluation", () => {
     const d = ok(SHELL_BUNDLE);
     d.rules.reverse();
     expect(ok(serializeDraft(d)).rules.map((r) => r.id)).toEqual([
@@ -257,6 +296,7 @@ describe("serializeDraft", () => {
             maxCalls: "5",
             window: "1m",
             perWhat: "execution",
+            maxWait: "",
             onLimiterError: "allow",
           },
         }),
@@ -270,6 +310,46 @@ describe("serializeDraft", () => {
     expect(ok(out).rules[0].rateLimit).toEqual(d.rules[0].rateLimit);
   });
 
+  it("omits an unset max_wait so the engine keeps refusing", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "5",
+            window: "1m",
+            perWhat: "execution",
+            maxWait: "",
+            onLimiterError: "allow",
+          },
+        }),
+      ],
+    };
+    expect(serializeDraft(d)).not.toContain("max_wait");
+  });
+
+  it("round-trips a max_wait", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          rateLimit: {
+            maxCalls: "5",
+            window: "1m",
+            perWhat: "execution",
+            maxWait: "30s",
+            onLimiterError: "allow",
+          },
+        }),
+      ],
+    };
+    expect(ok(serializeDraft(d)).rules[0].rateLimit).toEqual(
+      d.rules[0].rateLimit,
+    );
+  });
+
   it("emits a non-default scope and limiter-error", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
@@ -280,6 +360,7 @@ describe("serializeDraft", () => {
             maxCalls: "1",
             window: "1h",
             perWhat: "agent",
+            maxWait: "",
             onLimiterError: "deny",
           },
         }),
@@ -301,12 +382,40 @@ describe("serializeDraft", () => {
             maxCalls: "2",
             window: "1m",
             perWhat: "execution",
+            maxWait: "",
             onLimiterError: "allow",
           },
         }),
       ],
     };
     expect(serializeDraft(d)).toContain("rate_limit");
+  });
+
+  it("round-trips a budget and omits the default on_exceed", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({ id: "a", budget: { maxTokens: "100000", onExceed: "deny" } }),
+      ],
+    };
+    const out = serializeDraft(d);
+    expect(out).not.toContain("on_exceed");
+    // max_tokens must survive as a YAML int; a quoted "100000" fails the Go load.
+    expect(out).toContain("max_tokens: 100000");
+    expect(ok(out).rules[0].budget).toEqual(d.rules[0].budget);
+  });
+
+  it("emits a non-default on_exceed", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          budget: { maxTokens: "500", onExceed: "require_approval" },
+        }),
+      ],
+    };
+    expect(ok(serializeDraft(d)).rules[0].budget).toEqual(d.rules[0].budget);
   });
 
   it("merges multiple constraints on one argument key back into one predicate", () => {
@@ -381,6 +490,7 @@ describe("validateDraft", () => {
       id: "a",
       rateLimit: {
         perWhat: "execution",
+        maxWait: "",
         onLimiterError: "allow",
         ...over,
       } as RuleDraft["rateLimit"],
@@ -390,6 +500,34 @@ describe("validateDraft", () => {
     ).toMatch(want);
   });
 
+  // The kernel skips the check unless max_tokens is > 0.
+  it.each([
+    ["no max tokens", ""],
+    ["zero max tokens", "0"],
+    ["fractional max tokens", "2.5"],
+  ])("blocks a budget with %s", (_name, maxTokens) => {
+    const r = rule({ id: "a", budget: { maxTokens, onExceed: "deny" } });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/max tokens/);
+  });
+
+  it("blocks a max wait that is not a duration", () => {
+    const r = rule({
+      id: "a",
+      rateLimit: {
+        maxCalls: "5",
+        window: "1m",
+        perWhat: "execution",
+        maxWait: "half an hour",
+        onLimiterError: "allow",
+      },
+    });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/Max wait/);
+  });
+
   it("accepts a complete rate limit", () => {
     const r = rule({
       id: "a",
@@ -397,6 +535,7 @@ describe("validateDraft", () => {
         maxCalls: "5",
         window: "1m",
         perWhat: "agent",
+        maxWait: "",
         onLimiterError: "deny",
       },
     });
@@ -448,6 +587,7 @@ describe("lintDraft", () => {
         maxCalls: "5",
         window: "1m",
         perWhat: "execution",
+        maxWait: "",
         onLimiterError: "allow",
       },
     });
@@ -455,6 +595,19 @@ describe("lintDraft", () => {
     const w = lintDraft({ defaultAction: "deny", rules: [a, b] });
     expect(w[b.uid].some((m) => /share one rate-limit bucket/.test(m))).toBe(
       true,
+    );
+  });
+
+  // The kernel checks the budget only after the rule has decided to allow.
+  it("says a budget on a non-allow rule is ignored", () => {
+    const a = rule({
+      id: "a",
+      targets: ["x"],
+      decision: "require_approval",
+      budget: { maxTokens: "100", onExceed: "deny" },
+    });
+    expect(lintDraft({ defaultAction: "deny", rules: [a] })[a.uid][0]).toMatch(
+      /Budget is ignored/,
     );
   });
 

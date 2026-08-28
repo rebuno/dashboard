@@ -7,14 +7,14 @@ export type ArgOp = "equals" | "contains" | "one_of" | "regex";
 export type DefaultAction = "allow" | "deny";
 export type PerWhat = "execution" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
+export type OnExceed = "deny" | "require_approval";
 
 export const DECISIONS: Decision[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
 export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
-
-const PRIORITY_STEP = 10;
+export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
 
 export interface ArgCondition {
   uid: string;
@@ -24,15 +24,22 @@ export interface ArgCondition {
   values: string[]; // one_of
 }
 
+/** maxTokens stays a string so a half-typed field is empty, not NaN. */
+export interface Budget {
+  maxTokens: string;
+  onExceed: OnExceed;
+}
+
 /** maxCalls stays a string so a half-typed field is empty, not NaN. */
 export interface RateLimit {
   maxCalls: string;
   window: string;
   perWhat: PerWhat;
+  maxWait: string; // "" = refuse instead of parking the step
   onLimiterError: LimiterError;
 }
 
-/** A rule as edited. `priority` is absent by design — it is the list index. */
+/** A rule as edited. Its position in the list is its evaluation order. */
 export interface RuleDraft {
   uid: string;
   id: string;
@@ -46,6 +53,7 @@ export interface RuleDraft {
   timeout: string;
   message: string;
   rateLimit: RateLimit | null; // null = no rate_limit block
+  budget: Budget | null; // null = no budget block
 }
 
 export interface PolicyDraft {
@@ -76,6 +84,7 @@ export function emptyRule(): RuleDraft {
     timeout: "",
     message: "",
     rateLimit: null,
+    budget: null,
   };
 }
 
@@ -84,8 +93,13 @@ export function emptyRateLimit(): RateLimit {
     maxCalls: "",
     window: "",
     perWhat: "execution",
+    maxWait: "",
     onLimiterError: "allow",
   };
+}
+
+export function emptyBudget(): Budget {
+  return { maxTokens: "", onExceed: "deny" };
 }
 
 export function emptyDraft(): PolicyDraft {
@@ -117,7 +131,7 @@ function argsToYaml(
   return Object.keys(out).length ? out : undefined;
 }
 
-function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
+function ruleToYaml(r: RuleDraft): Record<string, unknown> {
   const when: Record<string, unknown> = {};
   if (r.stepKind) when.step_kind = r.stepKind;
   // The engine has both `target` (string) and `targets` (list); that split is a
@@ -145,15 +159,21 @@ function ruleToYaml(r: RuleDraft, index: number): Record<string, unknown> {
     };
     // "execution" and fail-open are the engine's defaults, so leave them implicit.
     if (r.rateLimit.perWhat !== "execution") rl.per_what = r.rateLimit.perWhat;
+    if (r.rateLimit.maxWait.trim()) rl.max_wait = r.rateLimit.maxWait.trim();
     if (r.rateLimit.onLimiterError !== "allow")
       rl.on_limiter_error = r.rateLimit.onLimiterError;
     then.rate_limit = rl;
   }
+  if (r.budget) {
+    const b: Record<string, unknown> = {
+      max_tokens: Number(r.budget.maxTokens),
+    };
+    // Anything but require_approval denies, so leave the deny case implicit.
+    if (r.budget.onExceed !== "deny") b.on_exceed = r.budget.onExceed;
+    then.budget = b;
+  }
 
-  const out: Record<string, unknown> = {
-    id: r.id.trim(),
-    priority: (index + 1) * PRIORITY_STEP,
-  };
+  const out: Record<string, unknown> = { id: r.id.trim() };
   // An omitted `when` is the zero Condition, which matches every step — same as
   // `when: {}` but without implying a constraint exists.
   if (Object.keys(when).length) out.when = when;
@@ -172,7 +192,7 @@ export function serializeDraft(d: PolicyDraft): string {
 // ------------------------------------------------------------------- parse
 
 const ROOT_KEYS = new Set(["default_action", "rules"]);
-const RULE_KEYS = new Set(["id", "priority", "when", "then"]);
+const RULE_KEYS = new Set(["id", "when", "then"]);
 const WHEN_KEYS = new Set([
   "target",
   "targets",
@@ -186,12 +206,15 @@ const THEN_KEYS = new Set([
   "reason",
   "approval_config",
   "rate_limit",
+  "budget",
 ]);
 const APPROVAL_KEYS = new Set(["approvers", "timeout", "message"]);
+const BUDGET_KEYS = new Set(["max_tokens", "on_exceed"]);
 const RATE_LIMIT_KEYS = new Set([
   "max_calls",
   "window",
   "per_what",
+  "max_wait",
   "on_limiter_error",
 ]);
 
@@ -266,6 +289,12 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
   // a numeric one goes to the raw editor rather than get silently reinterpreted.
   const window = asString(rl.window, `${where} rate_limit window`);
 
+  // Same nanosecond trap as window; unset means refuse rather than park.
+  const maxWait =
+    rl.max_wait === undefined
+      ? ""
+      : asString(rl.max_wait, `${where} rate_limit max_wait`);
+
   let perWhat: PerWhat = "execution";
   if (rl.per_what !== undefined) {
     const p = asString(rl.per_what, `${where} rate_limit per_what`);
@@ -292,20 +321,43 @@ function toRateLimit(raw: unknown, where: string): RateLimit {
     onLimiterError = e as LimiterError;
   }
 
-  return { maxCalls: String(rl.max_calls), window, perWhat, onLimiterError };
+  return {
+    maxCalls: String(rl.max_calls),
+    window,
+    perWhat,
+    maxWait,
+    onLimiterError,
+  };
 }
 
-function toRule(
-  raw: unknown,
-  i: number,
-): { rule: RuleDraft; priority: number } {
+function toBudget(raw: unknown, where: string): Budget {
+  const b = asObject(raw, `${where} budget`);
+  rejectUnknown(b, BUDGET_KEYS, `${where} budget`);
+
+  if (typeof b.max_tokens !== "number" || !Number.isInteger(b.max_tokens)) {
+    throw new Error(`${where}: budget max_tokens must be a whole number`);
+  }
+
+  let onExceed: OnExceed = "deny";
+  if (b.on_exceed !== undefined) {
+    const e = asString(b.on_exceed, `${where} budget on_exceed`);
+    // The kernel reads only require_approval and denies on everything else;
+    // don't let a typo look like a softer setting than it is.
+    if (!ON_EXCEEDS.includes(e as OnExceed)) {
+      throw new Error(
+        `${where}: budget on_exceed must be deny or require_approval`,
+      );
+    }
+    onExceed = e as OnExceed;
+  }
+
+  return { maxTokens: String(b.max_tokens), onExceed };
+}
+
+function toRule(raw: unknown, i: number): RuleDraft {
   const where = `rule ${i + 1}`;
   const r = asObject(raw, where);
   rejectUnknown(r, RULE_KEYS, where);
-
-  const priority = r.priority === undefined ? 0 : Number(r.priority);
-  if (!Number.isFinite(priority))
-    throw new Error(`${where}: priority must be a number`);
 
   const when =
     r.when === undefined || r.when === null
@@ -317,7 +369,9 @@ function toRule(
   if (when.step_kind !== undefined) {
     const sk = asString(when.step_kind, `${where} step_kind`);
     if (!(STEP_KINDS as string[]).includes(sk)) {
-      throw new Error(`${where}: step_kind must be one of ${STEP_KINDS.join(", ")}`);
+      throw new Error(
+        `${where}: step_kind must be one of ${STEP_KINDS.join(", ")}`,
+      );
     }
     stepKind = sk as StepKind;
   }
@@ -373,27 +427,23 @@ function toRule(
   }
 
   return {
-    priority,
-    rule: {
-      uid: uid(),
-      id: r.id === undefined ? "" : asString(r.id, `${where} id`),
-      stepKind,
-      targets,
-      agentIds,
-      args,
-      decision: decision as Decision,
-      reason:
-        then.reason === undefined
-          ? ""
-          : asString(then.reason, `${where} reason`),
-      approvers,
-      timeout,
-      message,
-      rateLimit:
-        then.rate_limit === undefined
-          ? null
-          : toRateLimit(then.rate_limit, where),
-    },
+    uid: uid(),
+    id: r.id === undefined ? "" : asString(r.id, `${where} id`),
+    stepKind,
+    targets,
+    agentIds,
+    args,
+    decision: decision as Decision,
+    reason:
+      then.reason === undefined ? "" : asString(then.reason, `${where} reason`),
+    approvers,
+    timeout,
+    message,
+    rateLimit:
+      then.rate_limit === undefined
+        ? null
+        : toRateLimit(then.rate_limit, where),
+    budget: then.budget === undefined ? null : toBudget(then.budget, where),
   };
 }
 
@@ -426,12 +476,10 @@ export function parseBundle(text: string): ParseResult {
       root.rules === undefined || root.rules === null ? [] : root.rules;
     if (!Array.isArray(rawRules)) throw new Error("rules must be a list");
 
-    // Sort by priority so the list reads in evaluation order — the whole point.
-    const parsed = rawRules.map(toRule);
-    parsed.sort((a, b) => a.priority - b.priority);
+    // Document order is evaluation order, so the list reads top to bottom.
     return {
       ok: true,
-      draft: { defaultAction, rules: parsed.map((p) => p.rule) },
+      draft: { defaultAction, rules: rawRules.map(toRule) },
     };
   } catch (e) {
     return {
@@ -528,6 +576,26 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
           r.uid,
           `Rate limit window "${w}" is not a duration (e.g. 1m, 1h).`,
         );
+
+      const mw = r.rateLimit.maxWait.trim();
+      if (mw && !DURATION_RE.test(mw))
+        push(
+          errors,
+          r.uid,
+          `Max wait "${mw}" is not a duration (e.g. 30s, 5m).`,
+        );
+    }
+
+    // The kernel skips the budget check unless max_tokens is > 0.
+    if (r.budget) {
+      const n = Number(r.budget.maxTokens);
+      if (!r.budget.maxTokens.trim() || !Number.isInteger(n) || n < 1) {
+        push(
+          errors,
+          r.uid,
+          "Budget needs a whole max tokens of 1 or more, or the budget does nothing.",
+        );
+      }
     }
   }
   return errors;
@@ -584,6 +652,15 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
         warnings,
         r.uid,
         `Matches every step, so the ${d.rules.length - 1 - i} rule(s) below never run.`,
+      );
+    }
+
+    // The kernel checks the budget only on a rule that allows.
+    if (r.budget && r.decision !== "allow") {
+      push(
+        warnings,
+        r.uid,
+        `Budget is ignored — it only applies to a rule that allows.`,
       );
     }
 

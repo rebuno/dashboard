@@ -6,8 +6,10 @@ import {
   ARG_OPS,
   DECISIONS,
   LIMITER_ERRORS,
+  ON_EXCEEDS,
   PER_WHATS,
   STEP_KINDS,
+  emptyBudget,
   emptyDraft,
   emptyRateLimit,
   emptyRule,
@@ -19,6 +21,7 @@ import {
   type ArgOp,
   type Decision,
   type LimiterError,
+  type OnExceed,
   type PerWhat,
   type PolicyDraft,
   type RuleDraft,
@@ -52,6 +55,11 @@ const PER_WHAT_LABEL: Record<PerWhat, string> = {
 const LIMITER_ERROR_LABEL: Record<LimiterError, string> = {
   allow: "let the step through",
   deny: "reject the step",
+};
+
+const ON_EXCEED_LABEL: Record<OnExceed, string> = {
+  deny: "reject the step",
+  require_approval: "require approval",
 };
 
 const field = "border border-gray-300 rounded px-2 py-1 text-xs bg-white";
@@ -166,6 +174,10 @@ function RuleCard({
 
   function patchLimit(patch: Partial<NonNullable<RuleDraft["rateLimit"]>>) {
     if (rule.rateLimit) onPatch({ rateLimit: { ...rule.rateLimit, ...patch } });
+  }
+
+  function patchBudget(patch: Partial<NonNullable<RuleDraft["budget"]>>) {
+    if (rule.budget) onPatch({ budget: { ...rule.budget, ...patch } });
   }
 
   return (
@@ -486,6 +498,20 @@ function RuleCard({
               </button>
             </div>
             <div className="flex items-center gap-2">
+              <span className={rowLabel}>Wait up to</span>
+              <input
+                value={rule.rateLimit.maxWait}
+                onChange={(e) => patchLimit({ maxWait: e.target.value })}
+                spellCheck={false}
+                placeholder="refuse right away"
+                className={`${field} font-mono w-32`}
+                aria-label="Max wait"
+              />
+              <span className="text-[10px] text-gray-400">
+                a limited step parks and retries once, instead of being refused
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className={rowLabel}>If broken</span>
               <select
                 value={rule.rateLimit.onLimiterError}
@@ -508,15 +534,68 @@ function RuleCard({
           </div>
         )}
 
-        {!rule.rateLimit && (
-          <button
-            type="button"
-            onClick={() => onPatch({ rateLimit: emptyRateLimit() })}
-            className="text-xs text-blue-600 hover:underline py-0.5"
-          >
-            + add rate limit
-          </button>
+        {/* Counted across the whole execution, and only on a rule that allows. */}
+        {rule.budget && (
+          <div className="space-y-1.5 pl-2 border-l-2 border-purple-100 ml-1">
+            <div className="flex items-center gap-2">
+              <span className={rowLabel}>Budget</span>
+              <input
+                value={rule.budget.maxTokens}
+                onChange={(e) => patchBudget({ maxTokens: e.target.value })}
+                inputMode="numeric"
+                placeholder="100000"
+                className={`${field} font-mono w-24`}
+                aria-label="Max tokens"
+              />
+              <span className="text-xs text-gray-400">
+                tokens per execution, then
+              </span>
+              <select
+                value={rule.budget.onExceed}
+                onChange={(e) =>
+                  patchBudget({ onExceed: e.target.value as OnExceed })
+                }
+                className={field}
+                aria-label="On budget exceeded"
+              >
+                {ON_EXCEEDS.map((v) => (
+                  <option key={v} value={v}>
+                    {ON_EXCEED_LABEL[v]}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => onPatch({ budget: null })}
+                className="text-gray-300 hover:text-gray-600 text-xs"
+                aria-label="Remove budget"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         )}
+
+        <div className="flex items-center gap-3">
+          {!rule.rateLimit && (
+            <button
+              type="button"
+              onClick={() => onPatch({ rateLimit: emptyRateLimit() })}
+              className="text-xs text-blue-600 hover:underline py-0.5"
+            >
+              + add rate limit
+            </button>
+          )}
+          {!rule.budget && (
+            <button
+              type="button"
+              onClick={() => onPatch({ budget: emptyBudget() })}
+              className="text-xs text-blue-600 hover:underline py-0.5"
+            >
+              + add budget
+            </button>
+          )}
+        </div>
 
         {errors.map((m) => (
           <p key={m} className="text-xs text-red-600">
