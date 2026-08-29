@@ -646,6 +646,15 @@ export default function PolicyEditor({
     return () => clearTimeout(t);
   }, [saved]);
 
+  useEffect(() => {
+    if (pending === null) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !saving) setPending(null);
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [pending, saving]);
+
   const errors = validateDraft(draft);
   const warnings = lintDraft(draft);
   const errorCount = Object.values(errors).flat().length;
@@ -738,6 +747,93 @@ export default function PolicyEditor({
           Review &amp; save
         </button>
       </div>
+
+      {pending !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="policy-review-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saving) {
+              setPending(null);
+            }
+          }}
+        >
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
+              <div>
+                <h2
+                  id="policy-review-title"
+                  className="text-base font-semibold text-gray-900"
+                >
+                  Review policy changes
+                </h2>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Review the changes for {agentId} before saving.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={saving}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40"
+                aria-label="Close policy review"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-5 md:grid-cols-2">
+              <div className="flex min-h-0 min-w-0 flex-col">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                  Current
+                </div>
+                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-gray-200 bg-gray-50 p-3 font-mono text-[10px]">
+                  {baseline.trim() || "(none)"}
+                </pre>
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-col">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                  New
+                </div>
+                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-blue-200 bg-blue-50/40 p-3 font-mono text-[10px]">
+                  {pending.trim()}
+                </pre>
+              </div>
+            </div>
+
+            {error && (
+              <p
+                role="alert"
+                className="border-t border-red-200 bg-red-50 px-5 py-2 text-xs text-red-700"
+              >
+                {error}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={saving}
+                autoFocus
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-40"
+              >
+                {saving ? "Saving…" : "Accept & save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!parsed.ok && mode === "yaml" && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
@@ -848,48 +944,8 @@ export default function PolicyEditor({
           Fix {errorCount} problem{errorCount > 1 ? "s" : ""} before saving.
         </p>
       )}
-      {error && <p className="text-xs text-red-600">{error}</p>}
-
-      {pending !== null && (
-        <div className="border border-gray-300 rounded-md bg-white p-3 space-y-2">
-          <p className="text-xs font-medium">Save this policy for {agentId}?</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-                Current
-              </div>
-              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
-                {baseline.trim() || "(none)"}
-              </pre>
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-                New
-              </div>
-              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-200 rounded p-2 overflow-auto max-h-64 whitespace-pre">
-                {pending.trim()}
-              </pre>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="bg-blue-600 text-white rounded px-3 py-1 text-xs hover:bg-blue-700 disabled:opacity-40"
-            >
-              {saving ? "Saving…" : "Save policy"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPending(null)}
-              disabled={saving}
-              className="border border-gray-300 rounded px-3 py-1 text-xs hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {error && pending === null && (
+        <p className="text-xs text-red-600">{error}</p>
       )}
     </div>
   );
