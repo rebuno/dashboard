@@ -37,10 +37,10 @@ export default function Sidebar() {
     <aside className="w-56 shrink-0 border-r border-gray-200 bg-white flex flex-col">
       <div className="h-14 flex items-center px-4 border-b border-gray-200">
         <Image
-          src="/rebuno.svg"
+          src="/rebuno-light.svg"
           alt="Rebuno"
-          width={512}
-          height={512}
+          width={1200}
+          height={548}
           className="h-8 w-auto"
         />
       </div>
