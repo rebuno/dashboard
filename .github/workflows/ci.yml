@@ -23,4 +23,4 @@ jobs:
       - run: pnpm run test
       - run: pnpm run typecheck
       - run: pnpm run lint
-      - run: pnpm run format:check
+      - run: pnpm run format
