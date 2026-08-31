@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   emptyRule,
   lintDraft,
+  type PolicyDraft,
   parseBundle,
+  type RuleDraft,
   serializeDraft,
   validateDraft,
-  type PolicyDraft,
-  type RuleDraft,
 } from "./policy";
 
 // Verbatim from rebuno/examples/policies/shell.yaml.

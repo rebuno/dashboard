@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import JsonBlock from "@/components/JsonBlock";
 import {
+  type Approval,
+  denyApproval,
   getStep,
   grantApproval,
-  denyApproval,
-  type Approval,
   type Step,
 } from "@/lib/api";
 import { getApproverName, setApproverName } from "@/lib/storage";
-import JsonBlock from "@/components/JsonBlock";
 
 export default function ApprovalCard({
   approval,

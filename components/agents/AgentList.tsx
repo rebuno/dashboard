@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { deleteAgent, type Agent } from "@/lib/api";
+import { type Agent, deleteAgent } from "@/lib/api";
 import PolicyEditor from "./PolicyEditor";
 
 export default function AgentList({

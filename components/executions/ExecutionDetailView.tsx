@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import EventsPanel from "@/components/executions/EventsPanel";
+import StepsPanel from "@/components/executions/StepsPanel";
+import JsonBlock from "@/components/JsonBlock";
+import StatusBadge from "@/components/StatusBadge";
 import {
   cancelExecution,
+  type Execution,
   getEvents,
   getExecution,
-  type Execution,
 } from "@/lib/api";
-import { usePolling } from "@/lib/hooks";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
-import StatusBadge from "@/components/StatusBadge";
-import JsonBlock from "@/components/JsonBlock";
-import StepsPanel from "@/components/executions/StepsPanel";
-import EventsPanel from "@/components/executions/EventsPanel";
+import { usePolling } from "@/lib/hooks";
 
 export default function ExecutionDetailView({
   executionId,

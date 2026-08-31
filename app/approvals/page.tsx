@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { listPendingApprovals, type Approval } from "@/lib/api";
-import { usePolling } from "@/lib/hooks";
-import { APPROVALS_POLL_INTERVAL } from "@/lib/constants";
 import ApprovalCard from "@/components/approvals/ApprovalCard";
+import { type Approval, listPendingApprovals } from "@/lib/api";
+import { APPROVALS_POLL_INTERVAL } from "@/lib/constants";
+import { usePolling } from "@/lib/hooks";
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<Approval[]>([]);

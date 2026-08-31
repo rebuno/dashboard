@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { METRICS_RANGES } from "@/lib/constants";
 import {
-  parsePrometheusText,
   groupByLabel,
-  singleValue,
   histogramQuantile,
+  parsePrometheusText,
+  singleValue,
 } from "@/lib/prometheus";
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL || "";

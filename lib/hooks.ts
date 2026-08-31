@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type DependencyList } from "react";
+import { type DependencyList, useEffect, useRef } from "react";
 
 export function usePolling(
   fn: () => void | Promise<void>,

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  parsePrometheusText,
   groupByLabel,
-  singleValue,
   histogramQuantile,
+  parsePrometheusText,
+  singleValue,
 } from "./prometheus";
 
 describe("parsePrometheusText", () => {

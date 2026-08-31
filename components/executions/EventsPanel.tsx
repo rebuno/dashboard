@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getEvents, type Event } from "@/lib/api";
-import { usePolling } from "@/lib/hooks";
+import { type Event, getEvents } from "@/lib/api";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
+import { usePolling } from "@/lib/hooks";
 
 const eventCache = new Map<string, { events: Event[]; lastSeq: number }>();
 

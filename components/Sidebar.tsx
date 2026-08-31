@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { checkHealth, listPendingApprovals } from "@/lib/api";
+import { APPROVALS_POLL_INTERVAL, HEALTH_POLL_INTERVAL } from "@/lib/constants";
 import { usePolling } from "@/lib/hooks";
-import { HEALTH_POLL_INTERVAL, APPROVALS_POLL_INTERVAL } from "@/lib/constants";
 
 const NAV_ITEMS = [
   { href: "/executions", label: "Executions" },

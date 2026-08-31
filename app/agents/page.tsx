@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { listAgents, type Agent } from "@/lib/api";
-import { usePolling } from "@/lib/hooks";
-import { AGENTS_POLL_INTERVAL } from "@/lib/constants";
 import AgentForm from "@/components/agents/AgentForm";
 import AgentList from "@/components/agents/AgentList";
+import { type Agent, listAgents } from "@/lib/api";
+import { AGENTS_POLL_INTERVAL } from "@/lib/constants";
+import { usePolling } from "@/lib/hooks";
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);

@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { usePolling } from "@/lib/hooks";
-import { METRICS_POLL_INTERVAL, METRICS_RANGES } from "@/lib/constants";
-import CounterCard from "@/components/metrics/CounterCard";
 import BreakdownBars from "@/components/metrics/BreakdownBars";
+import CounterCard from "@/components/metrics/CounterCard";
 import QuantileCard from "@/components/metrics/QuantileCard";
+import { METRICS_POLL_INTERVAL, METRICS_RANGES } from "@/lib/constants";
+import { usePolling } from "@/lib/hooks";
 
 interface MetricsResponse {
   source: "prometheus" | "kernel";

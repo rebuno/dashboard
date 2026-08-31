@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { listSteps, type Step } from "@/lib/api";
-import { usePolling } from "@/lib/hooks";
-import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
 import JsonBlock from "@/components/JsonBlock";
+import { listSteps, type Step } from "@/lib/api";
+import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
+import { usePolling } from "@/lib/hooks";
 
 const STEP_STATUS_STYLES: Record<string, string> = {
   proposed: "bg-gray-100 text-gray-700",
