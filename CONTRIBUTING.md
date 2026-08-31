@@ -16,7 +16,7 @@ pnpm dev           # next dev
 pnpm build         # production build
 pnpm test          # vitest run
 pnpm typecheck     # tsc --noEmit
-pnpm lint          # eslint
+pnpm lint          # biome check
 pnpm format        # biome format --write
 ```
 
