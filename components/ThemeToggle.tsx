@@ -2,9 +2,33 @@
 
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
+const THEME_TRANSITION_CLASS = "theme-transition";
+const THEME_TRANSITION_CLEANUP_MS = 180;
+
+let themeTransitionCleanupTimer: number | undefined;
+
+function startThemeTransition(root: HTMLElement) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  if (themeTransitionCleanupTimer !== undefined) {
+    window.clearTimeout(themeTransitionCleanupTimer);
+  }
+
+  root.classList.add(THEME_TRANSITION_CLASS);
+
+  // Commit the transition styles before changing the theme class.
+  root.getBoundingClientRect();
+
+  themeTransitionCleanupTimer = window.setTimeout(() => {
+    root.classList.remove(THEME_TRANSITION_CLASS);
+    themeTransitionCleanupTimer = undefined;
+  }, THEME_TRANSITION_CLEANUP_MS);
+}
+
 export default function ThemeToggle() {
   function toggleTheme() {
     const root = document.documentElement;
+    startThemeTransition(root);
     const isDark = root.classList.toggle("dark");
     root.style.colorScheme = isDark ? "dark" : "light";
 
