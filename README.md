@@ -1,6 +1,8 @@
 # Rebuno Dashboard
 
-Web UI for [Rebuno](https://github.com/rebuno/rebuno) — view executions, steps, events, and agent activity.
+Web UI for [Rebuno](https://github.com/rebuno/rebuno), an open-source execution
+runtime for production agents. Inspect executions, register agents, resolve
+approvals, and watch kernel metrics.
 
 Built with Next.js, React, and Tailwind CSS.
 
@@ -11,14 +13,31 @@ pnpm install
 pnpm dev
 ```
 
-Requires a running Rebuno kernel. Set `REBUNO_URL` (defaults to `http://localhost:8080`).
+Requires Node 20.9 or later and a running Rebuno kernel.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `REBUNO_URL` | `http://localhost:8080` | kernel base URL |
+| `REBUNO_API_KEY` | none | bearer token for the kernel's client and admin routes |
+| `PROMETHEUS_URL` | none | metrics source; without it the metrics page reads the kernel's own counters |
 
 ## Scripts
 
 | Command | Description |
 |---|---|
-| `pnpm dev` | Start dev server |
+| `pnpm dev` | Start the dev server |
 | `pnpm build` | Production build |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint |
+| `pnpm start` | Serve the production build |
+| `pnpm test` | Run the test suite with Vitest |
 | `pnpm typecheck` | Type-check with tsc |
+| `pnpm lint` | Check formatting and lints with Biome |
+| `pnpm format` | Apply Biome fixes |
+
+## Documentation
+
+[Dashboard](https://github.com/rebuno/rebuno/blob/main/docs/dashboard.md): what
+each page does, how it reaches the kernel, and how to deploy it.
+
+## License
+
+[MIT](LICENSE)
