@@ -54,14 +54,11 @@ export interface Approval {
   created_at: string;
 }
 
-// rebuno/internal/domain/agent.go has no `json:` tags, so Agent serializes
-// with Go's default (PascalCase) field names — unlike every other type here.
 export interface Agent {
-  ID: string;
-  WebhookURL: string;
-  Secret: string;
-  PolicyBundle: string;
-  RegisteredAt: string;
+  id: string;
+  webhook_url: string;
+  policy_bundle?: string;
+  registered_at: string;
 }
 
 async function request(method: string, path: string, body?: unknown) {
