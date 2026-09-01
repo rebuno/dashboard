@@ -57,7 +57,7 @@ export default function MetricsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Metrics</h1>
         {data?.source === "kernel" ? (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             since kernel start · no PROMETHEUS_URL
           </span>
         ) : (
@@ -69,7 +69,7 @@ export default function MetricsPage() {
                 className={`px-2.5 py-1 text-xs rounded-md border ${
                   r === range
                     ? "bg-blue-500 border-blue-500 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                 }`}
               >
                 {r}
@@ -79,8 +79,14 @@ export default function MetricsPage() {
         )}
       </div>
 
-      {loading && <div className="text-sm text-gray-400">Loading metrics…</div>}
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {loading && (
+        <div className="text-sm text-gray-400 dark:text-gray-400">
+          Loading metrics…
+        </div>
+      )}
+      {error && (
+        <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+      )}
 
       {data && (
         <div className="grid grid-cols-2 gap-4">

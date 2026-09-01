@@ -32,10 +32,16 @@ export default function ApprovalsPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto w-full space-y-4">
       <h1 className="text-lg font-semibold">Approvals</h1>
-      {loading && <p className="text-sm text-gray-400">Loading…</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && (
+        <p className="text-sm text-gray-400 dark:text-gray-400">Loading…</p>
+      )}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
       {!loading && !error && approvals.length === 0 && (
-        <p className="text-sm text-gray-400">No pending approvals</p>
+        <p className="text-sm text-gray-400 dark:text-gray-400">
+          No pending approvals
+        </p>
       )}
       <div className="space-y-3">
         {approvals.map((a) => (

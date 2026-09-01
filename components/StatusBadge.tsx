@@ -1,10 +1,11 @@
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-700",
-  running: "bg-blue-100 text-blue-700",
-  blocked: "bg-amber-100 text-amber-700",
-  completed: "bg-green-100 text-green-700",
-  failed: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-500",
+  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  running: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  blocked: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  completed:
+    "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
 };
 
 export default function StatusBadge({ status }: { status: string }) {

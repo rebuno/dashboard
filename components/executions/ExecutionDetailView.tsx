@@ -68,8 +68,16 @@ export default function ExecutionDetailView({
     }
   }
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Loading…</div>;
-  if (error) return <div className="p-6 text-sm text-red-600">{error}</div>;
+  if (loading)
+    return (
+      <div className="p-6 text-sm text-gray-400 dark:text-gray-400">
+        Loading…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="p-6 text-sm text-red-600 dark:text-red-400">{error}</div>
+    );
   if (!execution) return null;
 
   const isTerminal = ["completed", "failed", "cancelled"].includes(
@@ -78,31 +86,38 @@ export default function ExecutionDetailView({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="p-4 border-b border-gray-200 space-y-2">
+      <div className="p-4 border-b border-gray-200 space-y-2 dark:border-gray-800">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <StatusBadge status={execution.status} />
-            <code className="text-xs text-gray-500">{execution.id}</code>
+            <code className="text-xs text-gray-500 dark:text-gray-400">
+              {execution.id}
+            </code>
           </div>
           <button
             onClick={handleCancel}
             disabled={isTerminal || cancelling}
-            className="border border-red-300 text-red-600 rounded px-3 py-1 text-xs hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="border border-red-300 text-red-600 rounded px-3 py-1 text-xs hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
           >
             {cancelling ? "Cancelling…" : "Cancel"}
           </button>
         </div>
-        <div className="text-xs text-gray-500">
-          agent: <span className="text-gray-700">{execution.agent_id}</span>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          agent:{" "}
+          <span className="text-gray-700 dark:text-gray-200">
+            {execution.agent_id}
+          </span>
           {execution.agent_version && (
             <>
               {" "}
               · version:{" "}
-              <span className="text-gray-700">{execution.agent_version}</span>
+              <span className="text-gray-700 dark:text-gray-200">
+                {execution.agent_version}
+              </span>
             </>
           )}
         </div>
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-gray-400 dark:text-gray-400">
           created {new Date(execution.created_at).toLocaleString()} · updated{" "}
           {new Date(
             lastEventAt &&
@@ -115,27 +130,29 @@ export default function ExecutionDetailView({
           )}
         </div>
         {execution.failure_reason && (
-          <div className="text-xs text-red-600">
+          <div className="text-xs text-red-600 dark:text-red-400">
             failure: {execution.failure_reason}
           </div>
         )}
         {cancelError && (
-          <div className="text-xs text-red-600">{cancelError}</div>
+          <div className="text-xs text-red-600 dark:text-red-400">
+            {cancelError}
+          </div>
         )}
         <div className="flex flex-col gap-4">
           <JsonBlock label="Input" value={execution.input} />
           <JsonBlock label="Output" value={execution.output} />
         </div>
       </div>
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 dark:border-gray-800">
         {(["steps", "events"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium ${
               tab === t
-                ? "border-b-2 border-blue-600 text-blue-700"
-                : "text-gray-500 hover:text-gray-700"
+                ? "border-b-2 border-blue-600 text-blue-700 dark:border-blue-500 dark:text-blue-300"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             }`}
           >
             {t === "steps" ? "Steps" : "Events"}

@@ -29,8 +29,12 @@ export default function AgentsPage() {
     <div className="p-6 max-w-3xl mx-auto w-full space-y-4">
       <h1 className="text-lg font-semibold">Agents</h1>
       <AgentForm onRegistered={load} />
-      {loading && <p className="text-sm text-gray-400">Loading…</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && (
+        <p className="text-sm text-gray-400 dark:text-gray-400">Loading…</p>
+      )}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
       {!loading && !error && <AgentList agents={agents} onChanged={load} />}
     </div>
   );

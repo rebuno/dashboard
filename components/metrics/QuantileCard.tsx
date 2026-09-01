@@ -13,8 +13,8 @@ export default function QuantileCard({
     return v == null ? "—" : `${(v * 1000).toFixed(0)}ms`;
   }
   return (
-    <div className="border border-gray-200 rounded-md p-4 bg-white">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+    <div className="border border-gray-200 rounded-md p-4 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 dark:text-gray-400">
         {label}
       </div>
       <div className="flex gap-4 text-sm">
