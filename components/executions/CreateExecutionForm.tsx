@@ -41,17 +41,17 @@ export default function CreateExecutionForm({
   }
 
   return (
-    <div className="border-b border-gray-200">
+    <div className="border-b border-gray-200 dark:border-gray-800">
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
       >
         {expanded ? "− New Execution" : "+ New Execution"}
       </button>
       {expanded && (
         <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
               Agent ID
             </label>
             <input
@@ -59,22 +59,24 @@ export default function CreateExecutionForm({
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
               placeholder="e.g. researcher"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
               Input (JSON)
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
             />
           </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
           <button
             type="submit"
             disabled={loading}

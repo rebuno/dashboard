@@ -62,8 +62,9 @@ const ON_EXCEED_LABEL: Record<OnExceed, string> = {
   require_approval: "require approval",
 };
 
-const field = "border border-gray-300 rounded px-2 py-1 text-xs bg-white";
-const rowLabel = "text-xs text-gray-400 w-16 shrink-0";
+const field =
+  "border border-gray-300 rounded px-2 py-1 text-xs bg-white dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500";
+const rowLabel = "text-xs text-gray-400 w-16 shrink-0 dark:text-gray-400";
 
 function move<T>(arr: T[], from: number, to: number): T[] {
   const next = arr.slice();
@@ -88,17 +89,17 @@ function TokenInput({
     setText("");
   }
   return (
-    <div className="flex flex-wrap items-center gap-1 border border-gray-300 rounded px-1.5 py-1 bg-white flex-1 min-w-0">
+    <div className="flex flex-wrap items-center gap-1 border border-gray-300 rounded px-1.5 py-1 bg-white flex-1 min-w-0 dark:border-gray-700 dark:bg-gray-950">
       {values.map((v) => (
         <span
           key={v}
-          className="inline-flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5 text-xs font-mono"
+          className="inline-flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5 text-xs font-mono dark:bg-gray-800 dark:text-gray-200"
         >
           {v}
           <button
             type="button"
             onClick={() => onChange(values.filter((x) => x !== v))}
-            className="text-gray-400 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label={`Remove ${v}`}
           >
             ×
@@ -119,7 +120,7 @@ function TokenInput({
         }}
         placeholder={values.length ? "" : placeholder}
         spellCheck={false}
-        className="flex-1 min-w-[7rem] text-xs outline-none bg-transparent font-mono"
+        className="flex-1 min-w-[7rem] text-xs outline-none bg-transparent font-mono dark:text-gray-100 dark:placeholder:text-gray-500"
       />
     </div>
   );
@@ -186,21 +187,21 @@ function RuleCard({
         e.preventDefault();
         onDragOver();
       }}
-      className={`border border-gray-200 border-l-4 ${DECISION_STYLE[rule.decision]} rounded-md bg-white ${
+      className={`border border-gray-200 border-l-4 ${DECISION_STYLE[rule.decision]} rounded-md bg-white dark:border-y-gray-800 dark:border-r-gray-800 dark:bg-gray-900 ${
         dragging ? "opacity-50" : ""
       }`}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
         <span
           draggable
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
-          className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none px-1"
+          className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none px-1 dark:text-gray-500 dark:hover:text-gray-300"
           aria-hidden
         >
           ⠿
         </span>
-        <span className="text-xs text-gray-400 tabular-nums w-4">
+        <span className="text-xs text-gray-400 tabular-nums w-4 dark:text-gray-400">
           {index + 1}
         </span>
         <select
@@ -228,7 +229,7 @@ function RuleCard({
             type="button"
             onClick={() => onMove(index - 1)}
             disabled={index === 0}
-            className="text-gray-400 hover:text-gray-700 disabled:opacity-25 px-1"
+            className="text-gray-400 hover:text-gray-700 disabled:opacity-25 px-1 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Move up"
           >
             ↑
@@ -237,7 +238,7 @@ function RuleCard({
             type="button"
             onClick={() => onMove(index + 1)}
             disabled={index === total - 1}
-            className="text-gray-400 hover:text-gray-700 disabled:opacity-25 px-1"
+            className="text-gray-400 hover:text-gray-700 disabled:opacity-25 px-1 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Move down"
           >
             ↓
@@ -245,7 +246,7 @@ function RuleCard({
           <button
             type="button"
             onClick={onRemove}
-            className="text-gray-400 hover:text-red-600 px-1"
+            className="text-gray-400 hover:text-red-600 px-1 dark:text-gray-400 dark:hover:text-red-400"
             aria-label="Delete rule"
           >
             ×
@@ -254,7 +255,7 @@ function RuleCard({
       </div>
 
       <div className="px-3 py-2 space-y-1.5">
-        <div className="text-[10px] uppercase tracking-wide text-gray-400">
+        <div className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-400">
           When{" "}
           {rule.stepKind === null &&
           rule.targets === null &&
@@ -283,7 +284,7 @@ function RuleCard({
             <button
               type="button"
               onClick={() => onPatch({ stepKind: null })}
-              className="text-gray-300 hover:text-gray-600 text-xs"
+              className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
               aria-label="Remove step kind condition"
             >
               ×
@@ -302,7 +303,7 @@ function RuleCard({
             <button
               type="button"
               onClick={() => onPatch({ targets: null })}
-              className="text-gray-300 hover:text-gray-600 text-xs"
+              className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
               aria-label="Remove target condition"
             >
               ×
@@ -321,7 +322,7 @@ function RuleCard({
             <button
               type="button"
               onClick={() => onPatch({ agentIds: null })}
-              className="text-gray-300 hover:text-gray-600 text-xs"
+              className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
               aria-label="Remove agent condition"
             >
               ×
@@ -372,7 +373,7 @@ function RuleCard({
               onClick={() =>
                 onPatch({ args: rule.args.filter((x) => x.uid !== a.uid) })
               }
-              className="text-gray-300 hover:text-gray-600 text-xs"
+              className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
               aria-label="Remove argument condition"
             >
               ×
@@ -386,7 +387,7 @@ function RuleCard({
             addCondition(e.target.value);
             e.currentTarget.value = "";
           }}
-          className="text-xs text-blue-600 bg-transparent border-none outline-none cursor-pointer py-0.5"
+          className="text-xs text-blue-600 bg-transparent border-none outline-none cursor-pointer py-0.5 dark:text-blue-400"
           aria-label="Add condition"
         >
           <option value="">+ add condition</option>
@@ -398,7 +399,7 @@ function RuleCard({
           <option value="argument">Argument</option>
         </select>
 
-        <div className="text-[10px] uppercase tracking-wide text-gray-400 pt-1">
+        <div className="text-[10px] uppercase tracking-wide text-gray-400 pt-1 dark:text-gray-400">
           Then
         </div>
         <div className="flex items-center gap-2">
@@ -413,7 +414,7 @@ function RuleCard({
         </div>
 
         {rule.decision === "require_approval" && (
-          <div className="space-y-1.5 pl-2 border-l-2 border-amber-100 ml-1">
+          <div className="space-y-1.5 pl-2 border-l-2 border-amber-100 ml-1 dark:border-amber-900">
             <div className="flex items-center gap-2">
               <span className={rowLabel}>Approvers</span>
               <TokenInput
@@ -442,7 +443,7 @@ function RuleCard({
               />
             </div>
             {rule.approvers.length > 0 && (
-              <p className="text-[10px] text-gray-400">
+              <p className="text-[10px] text-gray-400 dark:text-gray-400">
                 Anyone else is refused, but the kernel takes the approver&apos;s
                 name from the request — this routes approvals, it doesn&apos;t
                 authenticate them.
@@ -454,7 +455,7 @@ function RuleCard({
         {/* The kernel checks the limit before the decision, so it caps how often
             this rule fires regardless of what the rule then decides. */}
         {rule.rateLimit && (
-          <div className="space-y-1.5 pl-2 border-l-2 border-blue-100 ml-1">
+          <div className="space-y-1.5 pl-2 border-l-2 border-blue-100 ml-1 dark:border-blue-900">
             <div className="flex items-center gap-2">
               <span className={rowLabel}>At most</span>
               <input
@@ -465,7 +466,9 @@ function RuleCard({
                 className={`${field} font-mono w-16`}
                 aria-label="Max calls"
               />
-              <span className="text-xs text-gray-400">calls every</span>
+              <span className="text-xs text-gray-400 dark:text-gray-400">
+                calls every
+              </span>
               <input
                 value={rule.rateLimit.window}
                 onChange={(e) => patchLimit({ window: e.target.value })}
@@ -491,7 +494,7 @@ function RuleCard({
               <button
                 type="button"
                 onClick={() => onPatch({ rateLimit: null })}
-                className="text-gray-300 hover:text-gray-600 text-xs"
+                className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
                 aria-label="Remove rate limit"
               >
                 ×
@@ -507,7 +510,7 @@ function RuleCard({
                 className={`${field} font-mono w-32`}
                 aria-label="Max wait"
               />
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-gray-400 dark:text-gray-400">
                 a limited step parks and retries once, instead of being refused
               </span>
             </div>
@@ -527,7 +530,7 @@ function RuleCard({
                   </option>
                 ))}
               </select>
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-gray-400 dark:text-gray-400">
                 when the limiter itself is unavailable
               </span>
             </div>
@@ -536,7 +539,7 @@ function RuleCard({
 
         {/* Counted across the whole execution, and only on a rule that allows. */}
         {rule.budget && (
-          <div className="space-y-1.5 pl-2 border-l-2 border-purple-100 ml-1">
+          <div className="space-y-1.5 pl-2 border-l-2 border-purple-100 ml-1 dark:border-purple-900">
             <div className="flex items-center gap-2">
               <span className={rowLabel}>Budget</span>
               <input
@@ -547,7 +550,7 @@ function RuleCard({
                 className={`${field} font-mono w-24`}
                 aria-label="Max tokens"
               />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-400">
                 tokens per execution, then
               </span>
               <select
@@ -567,7 +570,7 @@ function RuleCard({
               <button
                 type="button"
                 onClick={() => onPatch({ budget: null })}
-                className="text-gray-300 hover:text-gray-600 text-xs"
+                className="text-gray-300 hover:text-gray-600 text-xs dark:text-gray-500 dark:hover:text-gray-300"
                 aria-label="Remove budget"
               >
                 ×
@@ -581,7 +584,7 @@ function RuleCard({
             <button
               type="button"
               onClick={() => onPatch({ rateLimit: emptyRateLimit() })}
-              className="text-xs text-blue-600 hover:underline py-0.5"
+              className="text-xs text-blue-600 hover:underline py-0.5 dark:text-blue-400"
             >
               + add rate limit
             </button>
@@ -590,7 +593,7 @@ function RuleCard({
             <button
               type="button"
               onClick={() => onPatch({ budget: emptyBudget() })}
-              className="text-xs text-blue-600 hover:underline py-0.5"
+              className="text-xs text-blue-600 hover:underline py-0.5 dark:text-blue-400"
             >
               + add budget
             </button>
@@ -598,12 +601,12 @@ function RuleCard({
         </div>
 
         {errors.map((m) => (
-          <p key={m} className="text-xs text-red-600">
+          <p key={m} className="text-xs text-red-600 dark:text-red-400">
             {m}
           </p>
         ))}
         {warnings.map((m) => (
-          <p key={m} className="text-xs text-amber-600">
+          <p key={m} className="text-xs text-amber-600 dark:text-amber-400">
             {m}
           </p>
         ))}
@@ -716,8 +719,10 @@ export default function PolicyEditor({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500">Policy</span>
-          <div className="flex rounded border border-gray-200 overflow-hidden">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Policy
+          </span>
+          <div className="flex rounded border border-gray-200 overflow-hidden dark:border-gray-700">
             {(["blocks", "yaml"] as const).map((m) => (
               <button
                 key={m}
@@ -725,17 +730,23 @@ export default function PolicyEditor({
                 onClick={() => switchMode(m)}
                 className={`px-2 py-0.5 text-xs ${
                   mode === m
-                    ? "bg-gray-100 text-gray-900 font-medium"
-                    : "bg-white text-gray-500 hover:bg-gray-50"
+                    ? "bg-gray-100 text-gray-900 font-medium dark:bg-gray-800 dark:text-gray-100"
+                    : "bg-white text-gray-500 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
                 }`}
               >
                 {m === "blocks" ? "Blocks" : "YAML"}
               </button>
             ))}
           </div>
-          {dirty && <span className="text-xs text-amber-600">unsaved</span>}
+          {dirty && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              unsaved
+            </span>
+          )}
           {saved && !dirty && (
-            <span className="text-xs text-green-600">saved</span>
+            <span className="text-xs text-green-600 dark:text-green-400">
+              saved
+            </span>
           )}
         </div>
         <button
@@ -750,7 +761,7 @@ export default function PolicyEditor({
 
       {pending !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 dark:bg-black/70"
           role="dialog"
           aria-modal="true"
           aria-labelledby="policy-review-title"
@@ -760,16 +771,16 @@ export default function PolicyEditor({
             }
           }}
         >
-          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-900 dark:shadow-black/40">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
               <div>
                 <h2
                   id="policy-review-title"
-                  className="text-base font-semibold text-gray-900"
+                  className="text-base font-semibold text-gray-900 dark:text-gray-100"
                 >
                   Review policy changes
                 </h2>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                   Review the changes for {agentId} before saving.
                 </p>
               </div>
@@ -777,7 +788,7 @@ export default function PolicyEditor({
                 type="button"
                 onClick={() => setPending(null)}
                 disabled={saving}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 aria-label="Close policy review"
               >
                 ×
@@ -786,18 +797,18 @@ export default function PolicyEditor({
 
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-5 md:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-400">
                   Current
                 </div>
-                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-gray-200 bg-gray-50 p-3 font-mono text-[10px]">
+                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-gray-200 bg-gray-50 p-3 font-mono text-[10px] dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200">
                   {baseline.trim() || "(none)"}
                 </pre>
               </div>
               <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-400">
                   New
                 </div>
-                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-blue-200 bg-blue-50/40 p-3 font-mono text-[10px]">
+                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-blue-200 bg-blue-50/40 p-3 font-mono text-[10px] dark:border-blue-900 dark:bg-blue-950/30 dark:text-gray-200">
                   {pending.trim()}
                 </pre>
               </div>
@@ -806,19 +817,19 @@ export default function PolicyEditor({
             {error && (
               <p
                 role="alert"
-                className="border-t border-red-200 bg-red-50 px-5 py-2 text-xs text-red-700"
+                className="border-t border-red-200 bg-red-50 px-5 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
               >
                 {error}
               </p>
             )}
 
-            <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3">
+            <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-800 dark:bg-gray-950/50">
               <button
                 type="button"
                 onClick={() => setPending(null)}
                 disabled={saving}
                 autoFocus
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-40"
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
@@ -836,7 +847,7 @@ export default function PolicyEditor({
       )}
 
       {!parsed.ok && mode === "yaml" && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           This bundle has something the block editor can&apos;t represent, so
           it&apos;s shown as YAML rather than rewritten: {parsed.reason}
         </p>
@@ -845,7 +856,7 @@ export default function PolicyEditor({
       {mode === "blocks" ? (
         <div className="space-y-2">
           {draft.rules.length === 0 && (
-            <p className="text-xs text-gray-400 border border-dashed border-gray-200 rounded-md px-3 py-4 text-center">
+            <p className="text-xs text-gray-400 border border-dashed border-gray-200 rounded-md px-3 py-4 text-center dark:border-gray-800 dark:text-gray-400">
               No rules — every step falls through to the default below.
             </p>
           )}
@@ -887,15 +898,15 @@ export default function PolicyEditor({
             onClick={() =>
               setDraft((d) => ({ ...d, rules: [...d.rules, emptyRule()] }))
             }
-            className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+            className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             + Add rule
           </button>
 
           {/* The default is literally what happens after the last rule, so it
               lives at the bottom of the same stack. */}
-          <div className="flex items-center gap-2 border border-gray-200 rounded-md bg-gray-50 px-3 py-2">
-            <span className="text-xs text-gray-500">
+          <div className="flex items-center gap-2 border border-gray-200 rounded-md bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950/50">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               If no rule matches a tool or model call →
             </span>
             <select
@@ -934,18 +945,18 @@ export default function PolicyEditor({
           }}
           rows={16}
           spellCheck={false}
-          className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono"
+          className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
           placeholder={"default_action: deny\nrules: []"}
         />
       )}
 
       {showErrors && errorCount > 0 && mode === "blocks" && (
-        <p className="text-xs text-red-600">
+        <p className="text-xs text-red-600 dark:text-red-400">
           Fix {errorCount} problem{errorCount > 1 ? "s" : ""} before saving.
         </p>
       )}
       {error && pending === null && (
-        <p className="text-xs text-red-600">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   );

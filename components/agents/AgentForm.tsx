@@ -34,35 +34,35 @@ export default function AgentForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="border border-gray-200 rounded-md p-4 bg-white space-y-3"
+      className="border border-gray-200 rounded-md p-4 bg-white space-y-3 dark:border-gray-800 dark:bg-gray-900"
     >
       <h2 className="text-sm font-medium">Register Agent</h2>
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
             ID
           </label>
           <input
             value={id}
             onChange={(e) => setId(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
             Webhook URL
           </label>
           <input
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
             placeholder="http://localhost:5000/webhook"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
             Secret
           </label>
           <input
@@ -70,11 +70,13 @@ export default function AgentForm({
             onChange={(e) => setSecret(e.target.value)}
             required
             type="password"
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
           />
         </div>
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
       <button
         type="submit"
         disabled={loading}

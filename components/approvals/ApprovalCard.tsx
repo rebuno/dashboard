@@ -55,15 +55,15 @@ export default function ApprovalCard({
   }
 
   return (
-    <div className="border border-gray-200 rounded-md p-4 space-y-2 bg-white">
+    <div className="border border-gray-200 rounded-md p-4 space-y-2 bg-white dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-center justify-between">
         <Link
           href={`/executions/${approval.execution_id}`}
-          className="text-xs text-blue-600 hover:underline"
+          className="text-xs text-blue-600 hover:underline dark:text-blue-400"
         >
           {approval.execution_id}
         </Link>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400 dark:text-gray-400">
           {minutesRemaining <= 0
             ? "Expired"
             : `${minutesRemaining}m until timeout`}
@@ -74,33 +74,37 @@ export default function ApprovalCard({
       </div>
       {step && <JsonBlock label="Args" value={step.args} />}
       {approval.message && (
-        <p className="text-sm text-gray-600">{approval.message}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {approval.message}
+        </p>
       )}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
             Your name
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            className="w-full border border-gray-300 rounded px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
             Rationale (optional)
           </label>
           <input
             type="text"
             value={rationale}
             onChange={(e) => setRationale(e.target.value)}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            className="w-full border border-gray-300 rounded px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
           />
         </div>
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
       <div className="flex gap-2">
         <button
           onClick={() => decide("grant")}
