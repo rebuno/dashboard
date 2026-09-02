@@ -1,7 +1,6 @@
 export interface Execution {
   id: string;
   agent_id: string;
-  agent_version?: string;
   input?: unknown;
   status: string;
   output?: unknown;
@@ -108,12 +107,10 @@ export async function listExecutions(params?: {
 export async function createExecution(
   agentId: string,
   input: unknown,
-  agentVersion?: string,
 ): Promise<Execution> {
   return request("POST", "/api/v0/executions", {
     agent_id: agentId,
     input,
-    agent_version: agentVersion,
   });
 }
 

@@ -107,15 +107,6 @@ export default function ExecutionDetailView({
           <span className="text-gray-700 dark:text-gray-200">
             {execution.agent_id}
           </span>
-          {execution.agent_version && (
-            <>
-              {" "}
-              · version:{" "}
-              <span className="text-gray-700 dark:text-gray-200">
-                {execution.agent_version}
-              </span>
-            </>
-          )}
         </div>
         <div className="text-xs text-gray-400 dark:text-gray-400">
           created {new Date(execution.created_at).toLocaleString()} · updated{" "}
