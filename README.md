@@ -6,6 +6,23 @@ approvals, and watch kernel metrics.
 
 Built with Next.js, React, and Tailwind CSS.
 
+<p align="center">
+  <img src="assets/execution.gif" width="900">
+</p>
+
+## Executions
+![](assets/execution.png)
+
+## Approvals
+![](assets/approvals.png)
+
+## Agents
+![](assets/agents.png)
+
+
+## Metrics
+![](assets/metrics.png)
+
 ## Development
 
 ```bash
