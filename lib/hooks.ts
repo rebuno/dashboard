@@ -9,12 +9,9 @@ export function usePolling(
 ) {
   const savedFn = useRef(fn);
 
-  // Keep the ref current via an effect (not a render-body write) so this
-  // hook is safe under concurrent rendering. Runs after every render, before
-  // the interval effect below within the same commit (hooks run in
-  // declaration order), so `savedFn.current` is always up to date by the
-  // time the interval effect's own setup (including its immediate `tick()`)
-  // runs — whether that's on mount or after `deps` changes.
+  // An effect rather than a render-body write, so this is safe under concurrent
+  // rendering; hooks run in declaration order, so the interval effect below
+  // always sees the current fn.
   useEffect(() => {
     savedFn.current = fn;
   });
@@ -28,9 +25,7 @@ export function usePolling(
       try {
         await savedFn.current();
       } catch {
-        // Callers own their own error state (every fn here already
-        // try/catches internally); this is just a safety net against an
-        // unhandled rejection reaching the console.
+        // Callers own their error state; this only stops an unhandled rejection.
       } finally {
         inFlight = false;
       }
@@ -41,9 +36,8 @@ export function usePolling(
       cancelled = true;
       clearInterval(id);
     };
-    // fn is intentionally excluded: we always call the latest via the ref,
-    // and re-running this effect on every fn identity change would defeat
-    // the point of a stable interval. `deps` lets callers opt into a restart.
+    // fn is excluded on purpose: the ref always holds the latest, and restarting
+    // the interval on every identity change would defeat it. `deps` opts in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intervalMs, ...deps]);
 }

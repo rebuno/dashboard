@@ -161,10 +161,6 @@ export async function listPendingApprovals(): Promise<Approval[]> {
   return data ?? [];
 }
 
-export async function getApproval(id: string): Promise<Approval> {
-  return request("GET", `/api/v0/approvals/${encodeURIComponent(id)}`);
-}
-
 export async function grantApproval(
   id: string,
   decidedBy: string,

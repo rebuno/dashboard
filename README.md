@@ -30,7 +30,7 @@ pnpm install
 pnpm dev
 ```
 
-Requires Node 20.9 or later and a running Rebuno kernel.
+Requires Node 24 and a running Rebuno kernel.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

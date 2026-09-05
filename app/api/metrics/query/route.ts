@@ -55,9 +55,8 @@ function scalar(result: VectorResult[]): number | null {
   return Number.isNaN(v) ? null : v;
 }
 
-// Fallback for local dev with no Prometheus: scrape the kernel directly. These are
-// the process's in-memory counters, so they are cumulative since kernel start and
-// no time range applies — the response says so via `source` and the page adapts.
+// Without Prometheus, scrape the kernel's in-memory counters instead: cumulative
+// since kernel start, with no time range, which `source` tells the page.
 async function fromKernel() {
   const headers: Record<string, string> = {};
   if (REBUNO_API_KEY) headers["Authorization"] = `Bearer ${REBUNO_API_KEY}`;

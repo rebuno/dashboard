@@ -1,4 +1,3 @@
-// Block-editor model for policy bundles.
 import { dump, load } from "js-yaml";
 
 export type Decision = "allow" | "deny" | "require_approval";
@@ -115,8 +114,6 @@ export function isCatchAll(r: RuleDraft): boolean {
   );
 }
 
-// ---------------------------------------------------------------- serialize
-
 function argsToYaml(
   args: ArgCondition[],
 ): Record<string, Record<string, unknown>> | undefined {
@@ -188,8 +185,6 @@ export function serializeDraft(d: PolicyDraft): string {
   };
   return dump(doc, { lineWidth: -1, noRefs: true, quoteStyle: "single" });
 }
-
-// ------------------------------------------------------------------- parse
 
 const ROOT_KEYS = new Set(["default_action", "rules"]);
 const RULE_KEYS = new Set(["id", "when", "then"]);
@@ -489,15 +484,8 @@ export function parseBundle(text: string): ParseResult {
   }
 }
 
-// -------------------------------------------------- validate (blocks saving)
-
 // Go's time.ParseDuration. An unparseable timeout would fail the bundle load.
 const DURATION_RE = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/;
-
-export interface RuleProblems {
-  errors: Record<string, string[]>; // uid -> blocking
-  warnings: Record<string, string[]>; // uid -> advisory
-}
 
 function push(bag: Record<string, string[]>, key: string, msg: string) {
   (bag[key] ??= []).push(msg);
@@ -505,13 +493,25 @@ function push(bag: Record<string, string[]>, key: string, msg: string) {
 
 export function validateDraft(d: PolicyDraft): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
-  for (const r of d.rules) {
-    if (!r.id.trim())
+  const ids = new Map<string, number>();
+  d.rules.forEach((r, i) => {
+    const id = r.id.trim();
+    if (!id)
       push(
         errors,
         r.uid,
         "Needs an id — the kernel rejects a bundle with an unnamed rule.",
       );
+    else {
+      const prev = ids.get(id);
+      if (prev === undefined) ids.set(id, i);
+      else
+        push(
+          errors,
+          r.uid,
+          `Duplicate id — rule ${prev + 1} uses "${id}" too, and the kernel rejects a bundle with two rules sharing an id.`,
+        );
+    }
     if (r.targets !== null && r.targets.length === 0)
       push(errors, r.uid, "Target condition has no value.");
     if (r.agentIds !== null && r.agentIds.length === 0)
@@ -597,7 +597,7 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
         );
       }
     }
-  }
+  });
   return errors;
 }
 
@@ -632,10 +632,9 @@ function subsumes(a: RuleDraft, b: RuleDraft): boolean {
   return a.args.every((x) => b.args.some((y) => sameArg(x, y)));
 }
 
-/** Advisory problems: rules that can never fire, and duplicate ids. */
+/** Advisory problems: rules that can never fire. */
 export function lintDraft(d: PolicyDraft): Record<string, string[]> {
   const warnings: Record<string, string[]> = {};
-  const ids = new Map<string, number>();
 
   d.rules.forEach((r, i) => {
     const shadow = d.rules.findIndex((o, j) => j < i && subsumes(o, r));
@@ -662,24 +661,6 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
         r.uid,
         `Budget is ignored — it only applies to a rule that allows.`,
       );
-    }
-
-    const id = r.id.trim();
-    if (id) {
-      const prev = ids.get(id);
-      // Not fatal to the engine, but rule_id is the audit key on every decision
-      // and the rate-limit scope key, so a shared id merges two rules' buckets.
-      if (prev !== undefined) {
-        const shared =
-          r.rateLimit || d.rules[prev].rateLimit
-            ? ", so they share one rate-limit bucket"
-            : "";
-        push(
-          warnings,
-          r.uid,
-          `Duplicate id — rule ${prev + 1} uses "${id}" too${shared}.`,
-        );
-      } else ids.set(id, i);
     }
   });
 

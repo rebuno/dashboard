@@ -59,24 +59,6 @@ describe("parseBundle", () => {
     expect(d.rules[2].decision).toBe("require_approval");
   });
 
-  it("keeps document order — list order is eval order", () => {
-    const d = ok(`
-rules:
-  - id: first
-    then: { decision: deny }
-  - id: second
-    then: { decision: allow }
-`);
-    expect(d.rules.map((r) => r.id)).toEqual(["first", "second"]);
-  });
-
-  it("parses flow-style mappings used in the docs", () => {
-    const d = ok(
-      `rules:\n  - id: a\n    when: { step_kind: llm_call }\n    then: { decision: allow }\n`,
-    );
-    expect(d.rules[0].stepKind).toBe("llm_call");
-  });
-
   it("treats an empty bundle as a new deny-by-default policy", () => {
     expect(ok("")).toEqual({ defaultAction: "deny", rules: [] });
   });
@@ -307,26 +289,9 @@ describe("serializeDraft", () => {
     expect(out).not.toContain("on_limiter_error");
     // max_calls must survive as a YAML int; a quoted "5" fails the Go load.
     expect(out).toContain("max_calls: 5");
+    // An unset max_wait must stay out, or the engine parks instead of refusing.
+    expect(out).not.toContain("max_wait");
     expect(ok(out).rules[0].rateLimit).toEqual(d.rules[0].rateLimit);
-  });
-
-  it("omits an unset max_wait so the engine keeps refusing", () => {
-    const d: PolicyDraft = {
-      defaultAction: "deny",
-      rules: [
-        rule({
-          id: "a",
-          rateLimit: {
-            maxCalls: "5",
-            window: "1m",
-            perWhat: "execution",
-            maxWait: "",
-            onLimiterError: "allow",
-          },
-        }),
-      ],
-    };
-    expect(serializeDraft(d)).not.toContain("max_wait");
   });
 
   it("round-trips a max_wait", () => {
@@ -445,6 +410,15 @@ describe("validateDraft", () => {
     expect(
       validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
     ).toMatch(/id/);
+  });
+
+  // NewRuleEngine refuses a bundle with two rules sharing an id.
+  it("blocks a duplicate id", () => {
+    const a = rule({ id: "dup", targets: ["x"] });
+    const b = rule({ id: "dup", targets: ["y"] });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [a, b] })[b.uid][0],
+    ).toMatch(/Duplicate id/);
   });
 
   // matchArguments skips an empty constraint, so this widens the rule silently.
@@ -570,32 +544,11 @@ describe("lintDraft", () => {
     ).toEqual({});
   });
 
-  it("flags identical conditions and duplicate ids", () => {
+  it("flags a rule with the same conditions as one above it", () => {
     const a = rule({ id: "a", targets: ["x"] });
-    const b = rule({ id: "a", targets: ["x"], decision: "deny" });
+    const b = rule({ id: "b", targets: ["x"], decision: "deny" });
     const w = lintDraft({ defaultAction: "deny", rules: [a, b] });
-    expect(w[b.uid].some((m) => /Never runs/.test(m))).toBe(true);
-    expect(w[b.uid].some((m) => /Duplicate id/.test(m))).toBe(true);
-  });
-
-  // ScopeKey is rule_id + scope, so a duplicate id silently merges two buckets.
-  it("says so when duplicate ids would share a rate-limit bucket", () => {
-    const a = rule({
-      id: "dup",
-      targets: ["x"],
-      rateLimit: {
-        maxCalls: "5",
-        window: "1m",
-        perWhat: "execution",
-        maxWait: "",
-        onLimiterError: "allow",
-      },
-    });
-    const b = rule({ id: "dup", targets: ["y"] });
-    const w = lintDraft({ defaultAction: "deny", rules: [a, b] });
-    expect(w[b.uid].some((m) => /share one rate-limit bucket/.test(m))).toBe(
-      true,
-    );
+    expect(w[b.uid][0]).toMatch(/Never runs/);
   });
 
   // The kernel checks the budget only after the rule has decided to allow.

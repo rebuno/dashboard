@@ -27,10 +27,8 @@ async function proxy(req: NextRequest) {
   try {
     const resp = await fetch(target, init);
     const data = await resp.arrayBuffer();
-    // Null-body statuses (204/205/304) cannot be constructed with a body —
-    // Response/NextResponse throws even for an empty ArrayBuffer — so every
-    // kernel 204 (cancel, delete, grant/deny, load-policy) would otherwise
-    // throw here and get masked as a 502 by the catch below.
+    // NextResponse throws on a null-body status given any body, even an empty
+    // ArrayBuffer, which the catch below would then mask as a 502.
     if (resp.status === 204 || resp.status === 205 || resp.status === 304) {
       return new NextResponse(null, { status: resp.status });
     }

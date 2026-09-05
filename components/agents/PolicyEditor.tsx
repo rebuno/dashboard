@@ -452,8 +452,7 @@ function RuleCard({
           </div>
         )}
 
-        {/* The kernel checks the limit before the decision, so it caps how often
-            this rule fires regardless of what the rule then decides. */}
+        {/* Checked before the decision, so it caps how often this rule fires. */}
         {rule.rateLimit && (
           <div className="space-y-1.5 pl-2 border-l-2 border-blue-100 ml-1 dark:border-blue-900">
             <div className="flex items-center gap-2">
@@ -624,17 +623,17 @@ export default function PolicyEditor({
 }) {
   // Parsed once: the agents list polls, and re-deriving state from props would
   // wipe an in-progress edit on every tick.
-  const [parsed] = useState(() => parseBundle(bundle ?? ""));
+  const [parsed] = useState(() => parseBundle(bundle));
   const [draft, setDraft] = useState<PolicyDraft>(() =>
     parsed.ok ? parsed.draft : emptyDraft(),
   );
   const [mode, setMode] = useState<"blocks" | "yaml">(
     parsed.ok ? "blocks" : "yaml",
   );
-  const [rawYaml, setRawYaml] = useState(bundle ?? "");
-  const [baseline, setBaseline] = useState(bundle ?? "");
+  const [rawYaml, setRawYaml] = useState(bundle);
+  const [baseline, setBaseline] = useState(bundle);
   const [savedYaml, setSavedYaml] = useState(() =>
-    parsed.ok ? serializeDraft(parsed.draft) : (bundle ?? ""),
+    parsed.ok ? serializeDraft(parsed.draft) : bundle,
   );
   const [pending, setPending] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -903,8 +902,6 @@ export default function PolicyEditor({
             + Add rule
           </button>
 
-          {/* The default is literally what happens after the last rule, so it
-              lives at the bottom of the same stack. */}
           <div className="flex items-center gap-2 border border-gray-200 rounded-md bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950/50">
             <span className="text-xs text-gray-500 dark:text-gray-400">
               If no rule matches a tool or model call →

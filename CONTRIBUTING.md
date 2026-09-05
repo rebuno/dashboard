@@ -17,7 +17,7 @@ pnpm build         # production build
 pnpm test          # vitest run
 pnpm typecheck     # tsc --noEmit
 pnpm lint          # biome check
-pnpm format        # biome format --write
+pnpm format        # biome check --write
 ```
 
 The dashboard proxies the kernel API through its own routes. Configure it with:
@@ -32,7 +32,7 @@ The dashboard proxies the kernel API through its own routes. Configure it with:
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes. Add tests for new functionality.
-3. Run `pnpm format`, then make sure `pnpm test`, `pnpm typecheck`, and `pnpm lint` pass — CI runs those three plus `pnpm format:check`.
+3. Run `pnpm format`, then make sure `pnpm test`, `pnpm typecheck`, and `pnpm lint` pass. CI runs those three.
 4. Open a pull request with a clear description of what changed and why.
 
 ## Reporting Issues

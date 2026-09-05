@@ -1,7 +1,6 @@
 export const THEME_STORAGE_KEY = "rebuno.theme";
 
-// This runs before the page paints so a saved light preference never flashes
-// the default dark theme during hydration.
+// Runs before the first paint so a saved light preference never flashes dark.
 export const THEME_INIT_SCRIPT = `
   (() => {
     const root = document.documentElement;
