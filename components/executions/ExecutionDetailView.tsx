@@ -121,8 +121,15 @@ export default function ExecutionDetailView({
           )}
         </div>
         {execution.failure_reason && (
-          <div className="text-xs text-red-600 dark:text-red-400">
-            failure: {execution.failure_reason}
+          <div
+            className={`text-xs ${
+              execution.status === "cancelled"
+                ? "text-gray-500 dark:text-gray-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {execution.status === "cancelled" ? "reason" : "failure"}:{" "}
+            {execution.failure_reason}
           </div>
         )}
         {cancelError && (
