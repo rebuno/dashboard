@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PolicyDiff from "@/components/agents/PolicyDiff";
 import { loadPolicy } from "@/lib/api";
 import {
   ARG_OPS,
@@ -794,23 +795,8 @@ export default function PolicyEditor({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-5 md:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-400">
-                  Current
-                </div>
-                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-gray-200 bg-gray-50 p-3 font-mono text-[10px] dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200">
-                  {baseline.trim() || "(none)"}
-                </pre>
-              </div>
-              <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-400">
-                  New
-                </div>
-                <pre className="min-h-48 flex-1 overflow-auto whitespace-pre rounded border border-blue-200 bg-blue-50/40 p-3 font-mono text-[10px] dark:border-blue-900 dark:bg-blue-950/30 dark:text-gray-200">
-                  {pending.trim()}
-                </pre>
-              </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <PolicyDiff before={baseline} after={pending} />
             </div>
 
             {error && (
