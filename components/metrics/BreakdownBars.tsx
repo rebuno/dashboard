@@ -8,26 +8,25 @@ export default function BreakdownBars({
   const entries = Object.entries(data);
   const max = Math.max(1, ...entries.map(([, v]) => v));
   return (
-    <div className="border border-gray-200 rounded-md p-4 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 dark:text-gray-400">
-        {label}
-      </div>
+    <div className="surface-card min-h-36 p-5">
+      <div className="mb-4 text-xs font-medium text-ink-muted">{label}</div>
       {entries.length === 0 && (
-        <div className="text-sm text-gray-400 dark:text-gray-400">No data</div>
+        <div className="text-sm text-ink-faint">No data for this range</div>
       )}
-      <div className="space-y-1.5">
+      <div className="space-y-3">
         {entries.map(([key, value]) => (
-          <div key={key} className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 w-24 truncate dark:text-gray-400">
-              {key}
-            </span>
-            <div className="flex-1 bg-gray-100 rounded h-3 dark:bg-gray-800">
+          <div
+            key={key}
+            className="grid grid-cols-[7rem_1fr_2.5rem] items-center gap-3"
+          >
+            <span className="truncate text-xs text-ink-muted">{key}</span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
               <div
-                className="bg-blue-500 h-3 rounded"
+                className="h-full rounded-full bg-accent"
                 style={{ width: `${(value / max) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-gray-600 w-8 text-right dark:text-gray-300">
+            <span className="text-right font-mono text-xs tabular-nums text-ink-soft">
               {value}
             </span>
           </div>

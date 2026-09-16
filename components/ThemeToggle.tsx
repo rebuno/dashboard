@@ -25,7 +25,11 @@ function startThemeTransition(root: HTMLElement) {
   }, THEME_TRANSITION_CLEANUP_MS);
 }
 
-export default function ThemeToggle() {
+export default function ThemeToggle({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   function toggleTheme() {
     const root = document.documentElement;
     startThemeTransition(root);
@@ -43,7 +47,11 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+      aria-label="Toggle light or dark mode"
+      title={compact ? "Toggle theme" : undefined}
+      className={`flex h-10 items-center rounded-md text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink ${
+        compact ? "w-9 justify-center" : "w-full gap-3 px-3"
+      }`}
     >
       <svg
         aria-hidden="true"
@@ -73,8 +81,12 @@ export default function ThemeToggle() {
           d="M12 2.25v2M12 19.75v2M21.75 12h-2M4.25 12h-2M18.9 5.1l-1.4 1.4M6.5 17.5l-1.4 1.4M18.9 18.9l-1.4-1.4M6.5 6.5 5.1 5.1"
         />
       </svg>
-      <span className="dark:hidden">Dark mode</span>
-      <span className="hidden dark:inline">Light mode</span>
+      {!compact && (
+        <>
+          <span className="dark:hidden">Dark mode</span>
+          <span className="hidden dark:inline">Light mode</span>
+        </>
+      )}
     </button>
   );
 }

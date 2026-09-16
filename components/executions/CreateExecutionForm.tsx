@@ -41,46 +41,61 @@ export default function CreateExecutionForm({
   }
 
   return (
-    <div className="border-b border-gray-200 dark:border-gray-800">
+    <div className="border-b border-line bg-surface">
       <button
+        type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+        aria-expanded={expanded}
+        className="group flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"
       >
-        {expanded ? "− New Execution" : "+ New Execution"}
+        <span className="flex h-5 w-5 items-center justify-center rounded border border-line-strong text-base font-normal text-ink-muted group-hover:border-ink-faint">
+          {expanded ? "−" : "+"}
+        </span>
+        New execution
       </button>
       {expanded && (
-        <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 pb-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+            <label
+              htmlFor="new-execution-agent"
+              className="mb-1.5 block text-xs font-medium text-ink-muted"
+            >
               Agent ID
             </label>
             <input
+              id="new-execution-agent"
               type="text"
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
+              className="field-control w-full px-2.5 py-1.5 text-sm"
               placeholder="e.g. researcher"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+            <label
+              htmlFor="new-execution-input"
+              className="mb-1.5 block text-xs font-medium text-ink-muted"
+            >
               Input (JSON)
             </label>
             <textarea
+              id="new-execution-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              className="field-control w-full px-2.5 py-1.5 font-mono text-xs leading-relaxed"
             />
           </div>
           {error && (
-            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+              {error}
+            </p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white rounded px-3 py-1.5 text-sm hover:bg-blue-700 disabled:opacity-50"
+            className="button-primary w-full"
           >
             {loading ? "Creating…" : "Create Execution"}
           </button>

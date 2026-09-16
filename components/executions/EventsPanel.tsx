@@ -49,39 +49,33 @@ export default function EventsPanel({ executionId }: { executionId: string }) {
   usePolling(load, EXECUTION_DETAIL_POLL_INTERVAL, [executionId]);
 
   if (loading)
-    return (
-      <div className="p-4 text-sm text-gray-400 dark:text-gray-400">
-        Loading events…
-      </div>
-    );
+    return <div className="p-5 text-sm text-ink-muted">Loading events…</div>;
   if (error)
     return (
-      <div className="p-4 text-sm text-red-600 dark:text-red-400">{error}</div>
+      <div className="m-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        {error}
+      </div>
     );
   if (events.length === 0)
     return (
-      <div className="p-4 text-sm text-gray-400 dark:text-gray-400">
-        No events yet
-      </div>
+      <div className="m-5 empty-state">No events have been recorded yet.</div>
     );
 
   return (
-    <div className="divide-y divide-gray-100 font-mono text-xs dark:divide-gray-800">
+    <div className="divide-y divide-line font-mono text-xs">
       {events.map((evt) => (
-        <div key={evt.event_seq} className="px-4 py-2">
+        <div key={evt.event_seq} className="px-5 py-3 md:px-6">
           <div className="flex items-center gap-3">
-            <span className="text-gray-400 tabular-nums w-10 text-right dark:text-gray-400">
+            <span className="w-8 shrink-0 text-right text-ink-faint tabular-nums">
               {evt.event_seq}
             </span>
-            <span className="text-gray-400 dark:text-gray-400">
+            <span className="hidden shrink-0 text-ink-muted tabular-nums sm:inline">
               {new Date(evt.occurred_at).toLocaleTimeString()}
             </span>
-            <span className="font-medium text-gray-700 dark:text-gray-200">
-              {evt.type}
-            </span>
+            <span className="font-medium text-ink-soft">{evt.type}</span>
           </div>
           {evt.payload && Object.keys(evt.payload).length > 0 && (
-            <pre className="mt-1 ml-[3.75rem] text-gray-500 whitespace-pre-wrap break-all dark:text-gray-400">
+            <pre className="mt-2 ml-11 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-md border border-line bg-canvas p-3 text-[11px] leading-relaxed text-ink-muted sm:ml-[8.25rem]">
               {JSON.stringify(evt.payload, null, 2)}
             </pre>
           )}

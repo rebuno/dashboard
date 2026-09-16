@@ -53,23 +53,32 @@ export default function MetricsPage() {
   usePolling(load, METRICS_POLL_INTERVAL, [range]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Metrics</h1>
+    <div className="page-shell">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Metrics</h1>
+          <p className="page-description">
+            Runtime volume, outcomes, and latency from the kernel.
+          </p>
+        </div>
         {data?.source === "kernel" ? (
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            since kernel start · no PROMETHEUS_URL
+          <span
+            className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink-muted"
+            title="PROMETHEUS_URL is not configured"
+          >
+            Kernel · since start
           </span>
         ) : (
-          <div className="flex gap-1">
+          <div className="flex rounded-lg border border-line bg-surface p-1">
             {METRICS_RANGES.map((r) => (
               <button
                 key={r}
+                type="button"
                 onClick={() => selectRange(r)}
-                className={`px-2.5 py-1 text-xs rounded-md border ${
+                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   r === range
-                    ? "bg-blue-500 border-blue-500 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                    ? "bg-accent-wash text-accent"
+                    : "text-ink-muted hover:text-ink"
                 }`}
               >
                 {r}
@@ -77,68 +86,95 @@ export default function MetricsPage() {
             ))}
           </div>
         )}
-      </div>
+      </header>
 
       {loading && (
-        <div className="text-sm text-gray-400 dark:text-gray-400">
-          Loading metrics…
-        </div>
+        <div className="text-sm text-ink-muted">Loading metrics…</div>
       )}
       {error && (
-        <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {error}
+        </div>
       )}
 
       {data && (
-        <div className="grid grid-cols-2 gap-4">
-          <CounterCard
-            label="Executions Created"
-            value={data.counters.executionsCreated}
-          />
-          <CounterCard
-            label="Queue Depth (now)"
-            value={data.gauges.queueDepth}
-          />
-          <CounterCard
-            label="Dispatches Reclaimed"
-            value={data.counters.dispatchesReclaimed}
-          />
-          <BreakdownBars
-            label="Executions Completed"
-            data={data.breakdowns.executionsCompleted ?? {}}
-          />
-          <BreakdownBars
-            label="Steps Submitted"
-            data={data.breakdowns.stepsSubmitted ?? {}}
-          />
-          <BreakdownBars label="Replay" data={data.breakdowns.replay ?? {}} />
-          <BreakdownBars
-            label="Dispatch Outcomes"
-            data={data.breakdowns.dispatchOutcomes ?? {}}
-          />
-          <BreakdownBars
-            label="Policy Decisions"
-            data={data.breakdowns.policyDecisions ?? {}}
-          />
-          <BreakdownBars
-            label="Approval Outcomes"
-            data={data.breakdowns.approvalOutcomes ?? {}}
-          />
-          <BreakdownBars
-            label="Rate Limit"
-            data={data.breakdowns.rateLimit ?? {}}
-          />
-          <BreakdownBars
-            label="Worker Errors"
-            data={data.breakdowns.workerErrors ?? {}}
-          />
-          <QuantileCard
-            label="Dispatch Latency"
-            {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)}
-          />
-          <QuantileCard
-            label="Policy Evaluation Latency"
-            {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)}
-          />
+        <div className="space-y-6">
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+              Overview
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <CounterCard
+                label="Executions created"
+                value={data.counters.executionsCreated}
+              />
+              <CounterCard
+                label="Queue depth"
+                value={data.gauges.queueDepth}
+                current
+              />
+              <CounterCard
+                label="Dispatches reclaimed"
+                value={data.counters.dispatchesReclaimed}
+              />
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+              Activity
+            </h2>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <BreakdownBars
+                label="Executions completed"
+                data={data.breakdowns.executionsCompleted ?? {}}
+              />
+              <BreakdownBars
+                label="Steps submitted"
+                data={data.breakdowns.stepsSubmitted ?? {}}
+              />
+              <BreakdownBars
+                label="Replay"
+                data={data.breakdowns.replay ?? {}}
+              />
+              <BreakdownBars
+                label="Dispatch outcomes"
+                data={data.breakdowns.dispatchOutcomes ?? {}}
+              />
+              <BreakdownBars
+                label="Policy decisions"
+                data={data.breakdowns.policyDecisions ?? {}}
+              />
+              <BreakdownBars
+                label="Approval outcomes"
+                data={data.breakdowns.approvalOutcomes ?? {}}
+              />
+              <BreakdownBars
+                label="Rate limit"
+                data={data.breakdowns.rateLimit ?? {}}
+              />
+              <BreakdownBars
+                label="Worker errors"
+                data={data.breakdowns.workerErrors ?? {}}
+              />
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+              Latency
+            </h2>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <QuantileCard
+                label="Dispatch latency"
+                {...(data.quantiles.dispatchLatency ?? EMPTY_QUANTILES)}
+              />
+              <QuantileCard
+                label="Policy evaluation latency"
+                {...(data.quantiles.policyLatency ?? EMPTY_QUANTILES)}
+              />
+            </div>
+          </section>
         </div>
       )}
     </div>

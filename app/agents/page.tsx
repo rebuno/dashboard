@@ -26,16 +26,29 @@ export default function AgentsPage() {
   usePolling(load, AGENTS_POLL_INTERVAL);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto w-full space-y-4">
-      <h1 className="text-lg font-semibold">Agents</h1>
+    <div className="page-shell max-w-5xl">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Agents</h1>
+          <p className="page-description">
+            Register webhook workers and manage the policy each one runs under.
+          </p>
+        </div>
+      </header>
       <AgentForm onRegistered={load} />
       {loading && (
-        <p className="text-sm text-gray-400 dark:text-gray-400">Loading…</p>
+        <p className="mt-5 text-sm text-ink-muted">Loading agents…</p>
       )}
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {error}
+        </p>
       )}
-      {!loading && !error && <AgentList agents={agents} onChanged={load} />}
+      {!loading && !error && (
+        <div className="mt-5">
+          <AgentList agents={agents} onChanged={load} />
+        </div>
+      )}
     </div>
   );
 }

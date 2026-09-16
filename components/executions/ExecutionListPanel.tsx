@@ -43,20 +43,32 @@ export default function ExecutionListPanel() {
 
   usePolling(load, EXECUTION_LIST_POLL_INTERVAL, [statusFilter, refreshNonce]);
 
+  const hasSelection = pathname !== "/executions";
+
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <CreateExecutionForm onCreated={() => setRefreshNonce((n) => n + 1)} />
-      <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between dark:border-gray-800">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">
-          Executions
-        </span>
+    <section
+      className={`${
+        hasSelection ? "hidden md:flex" : "flex"
+      } h-full min-h-0 w-full shrink-0 flex-col border-line bg-surface md:w-[22rem] md:border-r`}
+      aria-label="Executions"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-4">
+        <div>
+          <h1 className="text-base font-semibold tracking-[-0.015em]">
+            Executions
+          </h1>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            {loading ? "Loading runs" : `${executions.length} shown`}
+          </p>
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => {
             setLoading(true);
             setStatusFilter(e.target.value);
           }}
-          className="text-xs border border-gray-300 rounded px-1.5 py-1 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+          aria-label="Filter executions by status"
+          className="field-control h-8 min-h-0 px-2.5 text-xs"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
@@ -65,20 +77,20 @@ export default function ExecutionListPanel() {
           ))}
         </select>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        {loading && (
-          <div className="p-4 text-sm text-gray-400 dark:text-gray-400">
-            Loading…
-          </div>
-        )}
+      <CreateExecutionForm onCreated={() => setRefreshNonce((n) => n + 1)} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {loading && <div className="p-5 text-sm text-ink-muted">Loading…</div>}
         {error && (
-          <div className="p-4 text-sm text-red-600 dark:text-red-400">
+          <div className="m-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
             {error}
           </div>
         )}
         {!loading && !error && executions.length === 0 && (
-          <div className="p-4 text-sm text-gray-400 dark:text-gray-400">
-            No executions
+          <div className="m-4 rounded-lg border border-dashed border-line-strong px-4 py-10 text-center">
+            <p className="text-sm font-medium text-ink-soft">No executions</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Create a run or change the status filter.
+            </p>
           </div>
         )}
         {executions.map((exec) => {
@@ -87,26 +99,29 @@ export default function ExecutionListPanel() {
             <Link
               key={exec.id}
               href={`/executions/${exec.id}`}
-              className={`block px-4 py-3 border-b border-gray-100 dark:border-gray-800 ${
-                active
-                  ? "bg-blue-50 dark:bg-blue-950/40"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-900"
+              className={`relative block border-b border-line px-4 py-3.5 transition-colors ${
+                active ? "bg-accent-wash" : "hover:bg-surface-muted"
               }`}
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <code className="text-xs text-gray-600 truncate dark:text-gray-300">
+              {active && (
+                <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" />
+              )}
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <code className="truncate text-[11px] text-ink-soft">
                   {exec.id}
                 </code>
                 <StatusBadge status={exec.status} />
               </div>
-              <div className="text-xs text-gray-400 dark:text-gray-400">
-                {exec.agent_id} ·{" "}
-                {new Date(exec.created_at).toLocaleTimeString()}
+              <div className="flex items-center justify-between gap-3 text-xs text-ink-muted">
+                <span className="truncate">{exec.agent_id}</span>
+                <span className="shrink-0 tabular-nums">
+                  {new Date(exec.created_at).toLocaleTimeString()}
+                </span>
               </div>
             </Link>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

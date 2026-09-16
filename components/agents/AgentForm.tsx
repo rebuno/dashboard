@@ -32,58 +32,74 @@ export default function AgentForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="border border-gray-200 rounded-md p-4 bg-white space-y-3 dark:border-gray-800 dark:bg-gray-900"
-    >
-      <h2 className="text-sm font-medium">Register Agent</h2>
-      <div className="grid grid-cols-3 gap-2">
+    <form onSubmit={handleSubmit} className="surface-card p-5">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold">Register agent</h2>
+        <p className="mt-1 text-xs text-ink-muted">
+          Connect a worker endpoint to make it available for executions.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+          <label
+            htmlFor="agent-id"
+            className="mb-1.5 block text-xs font-medium text-ink-muted"
+          >
             ID
           </label>
           <input
+            id="agent-id"
             value={id}
             onChange={(e) => setId(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+            className="field-control w-full px-2.5 py-1.5 text-sm"
+            placeholder="researcher"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+          <label
+            htmlFor="agent-webhook-url"
+            className="mb-1.5 block text-xs font-medium text-ink-muted"
+          >
             Webhook URL
           </label>
           <input
+            id="agent-webhook-url"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
+            className="field-control w-full px-2.5 py-1.5 text-sm"
             placeholder="http://localhost:5000/webhook"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+          <label
+            htmlFor="agent-secret"
+            className="mb-1.5 block text-xs font-medium text-ink-muted"
+          >
             Secret
           </label>
           <input
+            id="agent-secret"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             required
             type="password"
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+            className="field-control w-full px-2.5 py-1.5 text-sm"
+            placeholder="Webhook signing secret"
           />
         </div>
       </div>
       {error && (
-        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 text-white rounded px-3 py-1.5 text-sm hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? "Registering…" : "Register"}
-      </button>
+      <div className="mt-4 flex justify-end">
+        <button type="submit" disabled={loading} className="button-primary">
+          {loading ? "Registering…" : "Register agent"}
+        </button>
+      </div>
     </form>
   );
 }

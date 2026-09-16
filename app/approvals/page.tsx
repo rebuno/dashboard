@@ -30,20 +30,35 @@ export default function ApprovalsPage() {
   usePolling(load, APPROVALS_POLL_INTERVAL);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto w-full space-y-4">
-      <h1 className="text-lg font-semibold">Approvals</h1>
-      {loading && (
-        <p className="text-sm text-gray-400 dark:text-gray-400">Loading…</p>
-      )}
+    <div className="page-shell max-w-5xl">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Approvals</h1>
+          <p className="page-description">
+            Review steps paused by policy before they can continue.
+          </p>
+        </div>
+        {!loading && !error && approvals.length > 0 && (
+          <span className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink-muted">
+            {approvals.length} pending
+          </span>
+        )}
+      </header>
+      {loading && <p className="text-sm text-ink-muted">Loading approvals…</p>}
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      )}
-      {!loading && !error && approvals.length === 0 && (
-        <p className="text-sm text-gray-400 dark:text-gray-400">
-          No pending approvals
+        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {error}
         </p>
       )}
-      <div className="space-y-3">
+      {!loading && !error && approvals.length === 0 && (
+        <div className="empty-state">
+          <div>
+            <p className="font-medium text-ink-soft">Queue is clear</p>
+            <p className="mt-1 text-xs">No steps are waiting for approval.</p>
+          </div>
+        </div>
+      )}
+      <div className="space-y-4">
         {approvals.map((a) => (
           <ApprovalCard key={a.id} approval={a} onDecided={load} />
         ))}

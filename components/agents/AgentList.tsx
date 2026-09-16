@@ -50,9 +50,14 @@ export default function AgentList({
 
   if (agents.length === 0) {
     return (
-      <p className="text-sm text-gray-400 dark:text-gray-400">
-        No agents registered
-      </p>
+      <div className="empty-state">
+        <div>
+          <p className="font-medium text-ink-soft">No agents registered</p>
+          <p className="mt-1 text-xs">
+            Register a worker above to get started.
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -63,43 +68,66 @@ export default function AgentList({
         const detailsId = `agent-${encodeURIComponent(agent.id)}-details`;
 
         return (
-          <div
-            key={agent.id}
-            className="border border-gray-200 rounded-md bg-white overflow-hidden dark:border-gray-800 dark:bg-gray-900"
-          >
+          <div key={agent.id} className="surface-card overflow-hidden">
             <button
               type="button"
               onClick={() => toggleExpanded(agent.id)}
               aria-expanded={expanded}
               aria-controls={detailsId}
-              className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-surface-muted"
             >
-              <div className="min-w-0">
-                <div className="text-sm font-medium">{agent.id}</div>
-                <div className="text-xs text-gray-500 truncate dark:text-gray-400">
-                  {agent.webhook_url}
-                </div>
-                <div className="text-xs text-gray-400 dark:text-gray-400">
-                  registered {new Date(agent.registered_at).toLocaleString()}
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-ink-muted">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className="h-4 w-4"
+                  >
+                    <circle cx="12" cy="8" r="3.25" />
+                    <path d="M5.5 20c.45-3.55 2.55-5.5 6.5-5.5s6.05 1.95 6.5 5.5" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold">{agent.id}</div>
+                  <div className="truncate font-mono text-[11px] text-ink-muted">
+                    {agent.webhook_url}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-ink-faint">
+                    Registered {new Date(agent.registered_at).toLocaleString()}
+                  </div>
                 </div>
               </div>
-              <span className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                {expanded ? "Hide details" : "Show details"}
-                <span aria-hidden>{expanded ? "▾" : "▸"}</span>
+              <span className="flex shrink-0 items-center gap-2 text-xs font-medium text-ink-muted">
+                <span className="hidden sm:inline">
+                  {expanded ? "Hide" : "Manage"}
+                </span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`}
+                >
+                  <path d="m4.25 2.5 3.5 3.5-3.5 3.5" />
+                </svg>
               </span>
             </button>
 
             <div
               id={detailsId}
               hidden={!expanded}
-              className="border-t border-gray-200 p-4 space-y-3 dark:border-gray-800"
+              className="space-y-4 border-t border-line bg-canvas/45 p-5"
             >
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => handleDelete(agent.id)}
                   disabled={busyIds.has(agent.id)}
-                  className="border border-red-300 text-red-600 rounded px-3 py-1 text-xs hover:bg-red-50 disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+                  className="button-danger"
                 >
                   Delete
                 </button>

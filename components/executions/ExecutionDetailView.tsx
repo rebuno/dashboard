@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import EventsPanel from "@/components/executions/EventsPanel";
 import StepsPanel from "@/components/executions/StepsPanel";
@@ -70,13 +71,15 @@ export default function ExecutionDetailView({
 
   if (loading)
     return (
-      <div className="p-6 text-sm text-gray-400 dark:text-gray-400">
-        Loading…
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-muted">
+        Loading execution…
       </div>
     );
   if (error)
     return (
-      <div className="p-6 text-sm text-red-600 dark:text-red-400">{error}</div>
+      <div className="m-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        {error}
+      </div>
     );
   if (!execution) return null;
 
@@ -85,79 +88,101 @@ export default function ExecutionDetailView({
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="p-4 border-b border-gray-200 space-y-2 dark:border-gray-800">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <StatusBadge status={execution.status} />
-            <code className="text-xs text-gray-500 dark:text-gray-400">
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="border-b border-line px-5 py-5 md:px-6">
+        <Link
+          href="/executions"
+          className="mb-4 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink md:hidden"
+        >
+          <span aria-hidden="true">←</span> All executions
+        </Link>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="truncate text-lg font-semibold tracking-[-0.02em]">
+                {execution.agent_id}
+              </h1>
+              <StatusBadge status={execution.status} />
+            </div>
+            <code className="mt-1.5 block truncate text-[11px] text-ink-muted">
               {execution.id}
             </code>
           </div>
           <button
+            type="button"
             onClick={handleCancel}
             disabled={isTerminal || cancelling}
-            className="border border-red-300 text-red-600 rounded px-3 py-1 text-xs hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+            className="button-danger shrink-0"
           >
             {cancelling ? "Cancelling…" : "Cancel"}
           </button>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          agent:{" "}
-          <span className="text-gray-700 dark:text-gray-200">
-            {execution.agent_id}
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-muted">
+          <span>Created {new Date(execution.created_at).toLocaleString()}</span>
+          <span>
+            Updated{" "}
+            {new Date(
+              lastEventAt &&
+                Date.parse(lastEventAt) > Date.parse(execution.updated_at)
+                ? lastEventAt
+                : execution.updated_at,
+            ).toLocaleString()}
           </span>
-        </div>
-        <div className="text-xs text-gray-400 dark:text-gray-400">
-          created {new Date(execution.created_at).toLocaleString()} · updated{" "}
-          {new Date(
-            lastEventAt &&
-              Date.parse(lastEventAt) > Date.parse(execution.updated_at)
-              ? lastEventAt
-              : execution.updated_at,
-          ).toLocaleString()}
           {execution.deadline_at && (
-            <> · deadline {new Date(execution.deadline_at).toLocaleString()}</>
+            <span>
+              Deadline {new Date(execution.deadline_at).toLocaleString()}
+            </span>
           )}
         </div>
         {execution.failure_reason && (
-          <div
-            className={`text-xs ${
+          <p
+            className={`mt-3 rounded-md border px-3 py-2 text-xs ${
               execution.status === "cancelled"
-                ? "text-gray-500 dark:text-gray-400"
-                : "text-red-600 dark:text-red-400"
+                ? "border-line bg-surface-muted text-ink-muted"
+                : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
             }`}
           >
-            {execution.status === "cancelled" ? "reason" : "failure"}:{" "}
+            <span className="font-medium">
+              {execution.status === "cancelled" ? "Reason:" : "Failure:"}
+            </span>{" "}
             {execution.failure_reason}
-          </div>
+          </p>
         )}
         {cancelError && (
-          <div className="text-xs text-red-600 dark:text-red-400">
+          <div
+            className="mt-3 text-xs text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {cancelError}
           </div>
         )}
-        <div className="flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-2">
           <JsonBlock label="Input" value={execution.input} />
           <JsonBlock label="Output" value={execution.output} />
         </div>
-      </div>
-      <div className="flex border-b border-gray-200 dark:border-gray-800">
+      </header>
+      <div
+        className="flex gap-5 border-b border-line px-5 md:px-6"
+        role="tablist"
+      >
         {(["steps", "events"] as const).map((t) => (
           <button
             key={t}
+            type="button"
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium ${
+            role="tab"
+            aria-selected={tab === t}
+            className={`relative py-3 text-sm font-medium transition-colors ${
               tab === t
-                ? "border-b-2 border-blue-600 text-blue-700 dark:border-blue-500 dark:text-blue-300"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                ? "text-accent after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-accent"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             {t === "steps" ? "Steps" : "Events"}
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "steps" ? (
           <StepsPanel key={executionId} executionId={executionId} />
         ) : (

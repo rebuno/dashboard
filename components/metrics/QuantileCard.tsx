@@ -13,20 +13,23 @@ export default function QuantileCard({
     return v == null ? "—" : `${(v * 1000).toFixed(0)}ms`;
   }
   return (
-    <div className="border border-gray-200 rounded-md p-4 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 dark:text-gray-400">
-        {label}
-      </div>
-      <div className="flex gap-4 text-sm">
-        <div>
-          p50 <span className="font-medium">{fmt(p50)}</span>
-        </div>
-        <div>
-          p95 <span className="font-medium">{fmt(p95)}</span>
-        </div>
-        <div>
-          p99 <span className="font-medium">{fmt(p99)}</span>
-        </div>
+    <div className="surface-card p-5">
+      <div className="mb-4 text-xs font-medium text-ink-muted">{label}</div>
+      <div className="grid grid-cols-3 divide-x divide-line">
+        {[
+          ["p50", p50],
+          ["p95", p95],
+          ["p99", p99],
+        ].map(([percentile, value]) => (
+          <div key={percentile as string} className="px-3 first:pl-0 last:pr-0">
+            <div className="text-[10px] uppercase tracking-[0.1em] text-ink-faint">
+              {percentile}
+            </div>
+            <div className="mt-1 font-mono text-sm font-medium text-ink-soft">
+              {fmt(value as number | null)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

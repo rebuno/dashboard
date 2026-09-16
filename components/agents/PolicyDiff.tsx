@@ -21,11 +21,9 @@ export default function PolicyDiff({
   const removed = lines.filter((line) => line.kind === "removed").length;
 
   return (
-    <div className="overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs dark:border-gray-800 dark:bg-gray-900">
-        <span className="font-medium text-gray-700 dark:text-gray-200">
-          Policy changes
-        </span>
+    <div className="overflow-hidden rounded-lg border border-line bg-canvas">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-muted px-3 py-2 text-xs">
+        <span className="font-medium text-ink-soft">Policy changes</span>
         <div className="flex gap-3 font-mono">
           <span className="text-green-700 dark:text-green-300">
             +{added} added
@@ -36,23 +34,21 @@ export default function PolicyDiff({
         </div>
       </div>
       {added === 0 && removed === 0 && (
-        <p className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
-          No changes.
-        </p>
+        <p className="px-3 py-2 text-xs text-ink-muted">No changes.</p>
       )}
       {lines.length > 0 && (
         <div
           role="region"
           aria-label="Policy diff, scrollable"
           tabIndex={0}
-          className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"
+          className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
         >
           <table className="w-full border-collapse font-mono text-xs leading-6">
             <caption className="sr-only">
               Policy diff. Removed lines belong to the current policy; added
               lines belong to the new policy.
             </caption>
-            <thead className="border-b border-gray-200 bg-gray-50 text-[10px] text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+            <thead className="border-b border-line bg-surface-muted text-[10px] text-ink-muted">
               <tr>
                 <th scope="col" className="px-2 text-right font-normal">
                   Current

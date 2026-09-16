@@ -55,72 +55,100 @@ export default function ApprovalCard({
   }
 
   return (
-    <div className="border border-gray-200 rounded-md p-4 space-y-2 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/executions/${approval.execution_id}`}
-          className="text-xs text-blue-600 hover:underline dark:text-blue-400"
-        >
-          {approval.execution_id}
-        </Link>
-        <span className="text-xs text-gray-400 dark:text-gray-400">
+    <article className="surface-card overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
+        <div className="min-w-0">
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium leading-none text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              Awaiting review
+            </span>
+            <span className="text-xs text-ink-muted">
+              {step ? step.kind : "Step"}
+            </span>
+          </div>
+          <h2 className="truncate text-sm font-semibold text-ink">
+            {step ? step.target : approval.step_id}
+          </h2>
+        </div>
+        <span className="shrink-0 text-xs tabular-nums text-ink-muted">
           {minutesRemaining <= 0
             ? "Expired"
             : `${minutesRemaining}m until timeout`}
         </span>
       </div>
-      <div className="text-sm font-medium">
-        {step ? `${step.kind}: ${step.target}` : `step ${approval.step_id}`}
-      </div>
-      {step && <JsonBlock label="Args" value={step.args} />}
-      {approval.message && (
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {approval.message}
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
-            Your name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-          />
+      <div className="space-y-4 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-2 text-xs text-ink-muted">
+          <span>Execution</span>
+          <Link
+            href={`/executions/${approval.execution_id}`}
+            className="truncate font-mono text-accent hover:underline"
+          >
+            {approval.execution_id}
+          </Link>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
-            Rationale (optional)
-          </label>
-          <input
-            type="text"
-            value={rationale}
-            onChange={(e) => setRationale(e.target.value)}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-          />
+        {approval.message && (
+          <p className="rounded-md border border-line bg-surface-muted px-3 py-2.5 text-sm leading-relaxed text-ink-soft">
+            {approval.message}
+          </p>
+        )}
+        {step && <JsonBlock label="Arguments" value={step.args} />}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor={`approver-${approval.id}`}
+              className="mb-1.5 block text-xs font-medium text-ink-muted"
+            >
+              Approver
+            </label>
+            <input
+              id={`approver-${approval.id}`}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="field-control w-full px-2.5 py-1.5 text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={`rationale-${approval.id}`}
+              className="mb-1.5 block text-xs font-medium text-ink-muted"
+            >
+              Rationale{" "}
+              <span className="font-normal text-ink-faint">optional</span>
+            </label>
+            <input
+              id={`rationale-${approval.id}`}
+              type="text"
+              value={rationale}
+              onChange={(e) => setRationale(e.target.value)}
+              className="field-control w-full px-2.5 py-1.5 text-sm"
+            />
+          </div>
+        </div>
+        {error && (
+          <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={() => decide("deny")}
+            disabled={!trimmedName || busy !== null}
+            className="button-danger"
+          >
+            {busy === "deny" ? "Denying…" : "Deny"}
+          </button>
+          <button
+            type="button"
+            onClick={() => decide("grant")}
+            disabled={!trimmedName || busy !== null}
+            className="button-success"
+          >
+            {busy === "grant" ? "Approving…" : "Approve"}
+          </button>
         </div>
       </div>
-      {error && (
-        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
-      <div className="flex gap-2">
-        <button
-          onClick={() => decide("grant")}
-          disabled={!trimmedName || busy !== null}
-          className="flex-1 bg-green-600 text-white rounded px-3 py-1.5 text-sm hover:bg-green-700 disabled:opacity-50"
-        >
-          {busy === "grant" ? "Granting…" : "Grant"}
-        </button>
-        <button
-          onClick={() => decide("deny")}
-          disabled={!trimmedName || busy !== null}
-          className="flex-1 bg-red-600 text-white rounded px-3 py-1.5 text-sm hover:bg-red-700 disabled:opacity-50"
-        >
-          {busy === "deny" ? "Denying…" : "Deny"}
-        </button>
-      </div>
-    </div>
+    </article>
   );
 }

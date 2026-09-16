@@ -1,16 +1,25 @@
 export default function CounterCard({
   label,
   value,
+  current = false,
 }: {
   label: string;
   value: number | null;
+  current?: boolean;
 }) {
   return (
-    <div className="border border-gray-200 rounded-md p-4 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">
-        {label}
+    <div className="surface-card p-5">
+      <div className="text-xs font-medium text-ink-muted">{label}</div>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <span className="text-3xl font-medium tracking-[-0.035em] tabular-nums">
+          {value ?? "—"}
+        </span>
+        {current && (
+          <span className="mb-1 text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+            current
+          </span>
+        )}
       </div>
-      <div className="text-2xl font-semibold mt-1">{value ?? "—"}</div>
     </div>
   );
 }
