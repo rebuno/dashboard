@@ -15,6 +15,7 @@ import {
   LIMITER_ERRORS,
   type LimiterError,
   lintDraft,
+  mayRequireApproval,
   ON_EXCEEDS,
   type OnExceed,
   PER_WHATS,
@@ -25,6 +26,8 @@ import {
   STEP_KINDS,
   serializeDraft,
   uid,
+  VERDICTS,
+  type Verdict,
   validateDraft,
 } from "@/lib/policy";
 
@@ -32,12 +35,14 @@ const DECISION_LABEL: Record<Decision, string> = {
   allow: "Allow",
   deny: "Deny",
   require_approval: "Require approval",
+  judge: "Judge",
 };
 
 const DECISION_STYLE: Record<Decision, string> = {
   allow: "border-l-green-500",
   deny: "border-l-red-500",
   require_approval: "border-l-amber-500",
+  judge: "border-l-indigo-500",
 };
 
 const ARG_OP_LABEL: Record<ArgOp, string> = {
@@ -174,6 +179,10 @@ function RuleCard({
     onPatch({
       args: rule.args.map((a) => (a.uid === argUid ? { ...a, ...patch } : a)),
     });
+  }
+
+  function patchJudge(patch: Partial<RuleDraft["judge"]>) {
+    onPatch({ judge: { ...rule.judge, ...patch } });
   }
 
   function patchLimit(patch: Partial<NonNullable<RuleDraft["rateLimit"]>>) {
@@ -416,7 +425,53 @@ function RuleCard({
           />
         </div>
 
-        {rule.decision === "require_approval" && (
+        {rule.decision === "judge" && (
+          <div className="ml-1 space-y-1 border-l-2 border-indigo-100 pl-2 dark:border-indigo-900">
+            <div className="flex items-center gap-1.5">
+              <span className={rowLabel}>Context</span>
+              <input
+                value={rule.judge.instructions}
+                onChange={(e) => patchJudge({ instructions: e.target.value })}
+                placeholder="where the call runs, passed to the model"
+                className={`${field} flex-1 min-w-0`}
+                aria-label="Judge instructions"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={rowLabel}>Threshold</span>
+              <input
+                value={rule.judge.threshold}
+                onChange={(e) => patchJudge({ threshold: e.target.value })}
+                inputMode="decimal"
+                placeholder="0.6"
+                className={`${field} font-mono w-16`}
+                aria-label="Judge threshold"
+              />
+              <span className={rowLabel}>Otherwise</span>
+              <select
+                value={rule.judge.fallback}
+                onChange={(e) =>
+                  patchJudge({ fallback: e.target.value as Verdict })
+                }
+                className={field}
+                aria-label="Judge fallback"
+              >
+                {VERDICTS.map((v) => (
+                  <option key={v} value={v}>
+                    {DECISION_LABEL[v]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-gray-400">
+              The model&apos;s choice stands when its probability reaches the
+              threshold. Otherwise, or when the model can&apos;t be reached, the
+              fallback applies.
+            </p>
+          </div>
+        )}
+
+        {mayRequireApproval(rule.decision) && (
           <div className="ml-1 space-y-1 border-l-2 border-amber-100 pl-2 dark:border-amber-900">
             <div className="flex items-center gap-1.5">
               <span className={rowLabel}>Approvers</span>

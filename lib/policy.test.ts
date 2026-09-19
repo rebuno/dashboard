@@ -154,6 +154,32 @@ rules:
     });
   });
 
+  it("reads judge, defaulting fallback to the engine's own require_approval", () => {
+    const d = ok(`
+rules:
+  - id: a
+    then:
+      decision: judge
+  - id: b
+    then:
+      decision: judge
+      judge:
+        instructions: disposable build container
+        threshold: 0.7
+        fallback: deny
+`);
+    expect(d.rules[0].judge).toEqual({
+      instructions: "",
+      threshold: "",
+      fallback: "require_approval",
+    });
+    expect(d.rules[1].judge).toEqual({
+      instructions: "disposable build container",
+      threshold: "0.7",
+      fallback: "deny",
+    });
+  });
+
   // Falling back to the raw editor is safe; silently dropping a rule is not.
   it.each([
     ["unknown root key", "default_action: deny\nbogus: 1\nrules: []\n"],
@@ -210,6 +236,22 @@ rules:
       "rules:\n  - id: a\n    when: { target: x, targets: [y] }\n    then: { decision: allow }\n",
     ],
     ["bad decision", "rules:\n  - id: a\n    then: { decision: maybe }\n"],
+    [
+      "judge on a rule that does not judge",
+      "rules:\n  - id: a\n    then: { decision: allow, judge: { threshold: 0.7 } }\n",
+    ],
+    [
+      "unknown judge key",
+      "rules:\n  - id: a\n    then: { decision: judge, judge: { model: x } }\n",
+    ],
+    [
+      "unknown judge fallback",
+      "rules:\n  - id: a\n    then: { decision: judge, judge: { fallback: judge } }\n",
+    ],
+    [
+      "quoted judge threshold",
+      "rules:\n  - id: a\n    then: { decision: judge, judge: { threshold: '0.7' } }\n",
+    ],
     [
       "bad step_kind",
       "rules:\n  - id: a\n    when: { step_kind: rpc }\n    then: { decision: allow }\n",
@@ -383,6 +425,32 @@ describe("serializeDraft", () => {
     expect(ok(serializeDraft(d)).rules[0].budget).toEqual(d.rules[0].budget);
   });
 
+  it("round-trips a judge rule with its approval_config and omits the default fallback", () => {
+    const d: PolicyDraft = {
+      defaultAction: "deny",
+      rules: [
+        rule({
+          id: "a",
+          decision: "judge",
+          judge: { instructions: "", threshold: "0.7", fallback: "deny" },
+          approvers: ["ops"],
+        }),
+        rule({ id: "b", decision: "judge" }),
+      ],
+    };
+    const out = serializeDraft(d);
+    // A quoted "0.7" fails the Go load, so threshold must stay a YAML float.
+    expect(out).toContain("threshold: 0.7");
+    expect(out).toContain("approval_config");
+    const back = ok(out).rules;
+    expect(back[0]).toMatchObject({
+      judge: d.rules[0].judge,
+      approvers: ["ops"],
+    });
+    expect(back[1].judge).toEqual(d.rules[1].judge);
+    expect(out.match(/judge:\n/g)).toHaveLength(1);
+  });
+
   it("merges multiple constraints on one argument key back into one predicate", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
@@ -502,6 +570,21 @@ describe("validateDraft", () => {
     ).toMatch(/Max wait/);
   });
 
+  it("blocks a judge threshold outside 0 to 1", () => {
+    const r = rule({
+      id: "a",
+      decision: "judge",
+      judge: {
+        instructions: "",
+        threshold: "70",
+        fallback: "require_approval",
+      },
+    });
+    expect(
+      validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
+    ).toMatch(/Threshold "70"/);
+  });
+
   it("accepts a complete rate limit", () => {
     const r = rule({
       id: "a",
@@ -562,6 +645,16 @@ describe("lintDraft", () => {
     expect(lintDraft({ defaultAction: "deny", rules: [a] })[a.uid][0]).toMatch(
       /Budget is ignored/,
     );
+  });
+
+  it("keeps quiet about a budget on a judge rule, which can allow", () => {
+    const a = rule({
+      id: "a",
+      targets: ["x"],
+      decision: "judge",
+      budget: { maxTokens: "100", onExceed: "deny" },
+    });
+    expect(lintDraft({ defaultAction: "deny", rules: [a] })).toEqual({});
   });
 
   // The real footgun: dragging the broad approval rule above the narrow allow

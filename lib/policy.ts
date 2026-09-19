@@ -1,6 +1,7 @@
 import { dump, load } from "js-yaml";
 
-export type Decision = "allow" | "deny" | "require_approval";
+export type Decision = "allow" | "deny" | "require_approval" | "judge";
+export type Verdict = Exclude<Decision, "judge">;
 export type StepKind = "tool_call" | "llm_call" | "local";
 export type ArgOp = "equals" | "contains" | "one_of" | "regex";
 export type DefaultAction = "allow" | "deny";
@@ -8,7 +9,13 @@ export type PerWhat = "execution" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
 export type OnExceed = "deny" | "require_approval";
 
-export const DECISIONS: Decision[] = ["allow", "deny", "require_approval"];
+export const DECISIONS: Decision[] = [
+  "allow",
+  "deny",
+  "require_approval",
+  "judge",
+];
+export const VERDICTS: Verdict[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
 export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
@@ -38,6 +45,13 @@ export interface RateLimit {
   onLimiterError: LimiterError;
 }
 
+/** threshold stays a string so a half-typed field is empty, not NaN. */
+export interface Judge {
+  instructions: string;
+  threshold: string; // "" = the kernel's default
+  fallback: Verdict;
+}
+
 /** A rule as edited. Its position in the list is its evaluation order. */
 export interface RuleDraft {
   uid: string;
@@ -51,6 +65,7 @@ export interface RuleDraft {
   approvers: string[];
   timeout: string;
   message: string;
+  judge: Judge;
   rateLimit: RateLimit | null; // null = no rate_limit block
   budget: Budget | null; // null = no budget block
 }
@@ -82,9 +97,14 @@ export function emptyRule(): RuleDraft {
     approvers: [],
     timeout: "",
     message: "",
+    judge: emptyJudge(),
     rateLimit: null,
     budget: null,
   };
+}
+
+export function emptyJudge(): Judge {
+  return { instructions: "", threshold: "", fallback: "require_approval" };
 }
 
 export function emptyRateLimit(): RateLimit {
@@ -103,6 +123,11 @@ export function emptyBudget(): Budget {
 
 export function emptyDraft(): PolicyDraft {
   return { defaultAction: "deny", rules: [] };
+}
+
+/** A judge rule can land on require_approval, so its approval_config applies. */
+export function mayRequireApproval(d: Decision): boolean {
+  return d === "require_approval" || d === "judge";
 }
 
 export function isCatchAll(r: RuleDraft): boolean {
@@ -142,7 +167,16 @@ function ruleToYaml(r: RuleDraft): Record<string, unknown> {
 
   const then: Record<string, unknown> = { decision: r.decision };
   if (r.reason.trim()) then.reason = r.reason.trim();
-  if (r.decision === "require_approval") {
+  if (r.decision === "judge") {
+    const j: Record<string, unknown> = {};
+    if (r.judge.instructions.trim())
+      j.instructions = r.judge.instructions.trim();
+    if (r.judge.threshold.trim()) j.threshold = Number(r.judge.threshold);
+    // require_approval is the engine's default fallback, so leave it implicit.
+    if (r.judge.fallback !== "require_approval") j.fallback = r.judge.fallback;
+    if (Object.keys(j).length) then.judge = j;
+  }
+  if (mayRequireApproval(r.decision)) {
     const ac: Record<string, unknown> = {};
     if (r.approvers.length) ac.approvers = r.approvers;
     if (r.timeout.trim()) ac.timeout = r.timeout.trim();
@@ -202,7 +236,9 @@ const THEN_KEYS = new Set([
   "approval_config",
   "rate_limit",
   "budget",
+  "judge",
 ]);
+const JUDGE_KEYS = new Set(["instructions", "threshold", "fallback"]);
 const APPROVAL_KEYS = new Set(["approvers", "timeout", "message"]);
 const BUDGET_KEYS = new Set(["max_tokens", "on_exceed"]);
 const RATE_LIMIT_KEYS = new Set([
@@ -349,6 +385,38 @@ function toBudget(raw: unknown, where: string): Budget {
   return { maxTokens: String(b.max_tokens), onExceed };
 }
 
+function toJudge(raw: unknown, where: string): Judge {
+  const j = asObject(raw, `${where} judge`);
+  rejectUnknown(j, JUDGE_KEYS, `${where} judge`);
+
+  let threshold = "";
+  if (j.threshold !== undefined) {
+    if (typeof j.threshold !== "number")
+      throw new Error(`${where}: judge threshold must be a number`);
+    threshold = String(j.threshold);
+  }
+
+  let fallback: Verdict = "require_approval";
+  if (j.fallback !== undefined) {
+    const f = asString(j.fallback, `${where} judge fallback`);
+    if (!VERDICTS.includes(f as Verdict)) {
+      throw new Error(
+        `${where}: judge fallback must be allow, deny or require_approval`,
+      );
+    }
+    fallback = f as Verdict;
+  }
+
+  return {
+    instructions:
+      j.instructions === undefined
+        ? ""
+        : asString(j.instructions, `${where} judge instructions`),
+    threshold,
+    fallback,
+  };
+}
+
 function toRule(raw: unknown, i: number): RuleDraft {
   const where = `rule ${i + 1}`;
   const r = asObject(raw, where);
@@ -403,8 +471,12 @@ function toRule(raw: unknown, i: number): RuleDraft {
   const decision = asString(then.decision, `${where} decision`);
   if (!DECISIONS.includes(decision as Decision)) {
     throw new Error(
-      `${where}: decision must be allow, deny or require_approval`,
+      `${where}: decision must be allow, deny, require_approval or judge`,
     );
+  }
+  // The kernel rejects this; keeping it would drop the block on the next save.
+  if (then.judge !== undefined && decision !== "judge") {
+    throw new Error(`${where}: judge is set but decision is ${decision}`);
   }
 
   let approvers: string[] = [];
@@ -434,6 +506,7 @@ function toRule(raw: unknown, i: number): RuleDraft {
     approvers,
     timeout,
     message,
+    judge: then.judge === undefined ? emptyJudge() : toJudge(then.judge, where),
     rateLimit:
       then.rate_limit === undefined
         ? null
@@ -541,7 +614,7 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
     }
 
     if (
-      r.decision === "require_approval" &&
+      mayRequireApproval(r.decision) &&
       r.timeout.trim() &&
       !DURATION_RE.test(r.timeout.trim())
     ) {
@@ -550,6 +623,13 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
         r.uid,
         `Timeout "${r.timeout.trim()}" is not a duration (e.g. 30s, 5m, 1h30m).`,
       );
+    }
+
+    const t = r.judge.threshold.trim();
+    if (r.decision === "judge" && t) {
+      const n = Number(t);
+      if (!Number.isFinite(n) || n < 0 || n > 1)
+        push(errors, r.uid, `Threshold "${t}" must be a number from 0 to 1.`);
     }
 
     // The limiter no-ops unless both max_calls and window are > 0, so half a
@@ -654,8 +734,8 @@ export function lintDraft(d: PolicyDraft): Record<string, string[]> {
       );
     }
 
-    // The kernel checks the budget only on a rule that allows.
-    if (r.budget && r.decision !== "allow") {
+    // The kernel checks the budget only on an allow, which a judge can return.
+    if (r.budget && r.decision !== "allow" && r.decision !== "judge") {
       push(
         warnings,
         r.uid,
