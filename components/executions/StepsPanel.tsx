@@ -49,9 +49,8 @@ export default function StepsPanel({ executionId }: { executionId: string }) {
       <div className="m-5 empty-state">No steps have been submitted yet.</div>
     );
 
-  const ordered = [...steps].sort((a, b) =>
-    (a.started_at ?? "9999").localeCompare(b.started_at ?? "9999"),
-  );
+  const at = (s: Step) => s.started_at ?? s.completed_at ?? "9999";
+  const ordered = [...steps].sort((a, b) => at(a).localeCompare(at(b)));
 
   return (
     <div className="divide-y divide-line">
