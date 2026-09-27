@@ -6,6 +6,8 @@ import { loadPolicy } from "@/lib/api";
 import {
   ARG_OPS,
   type ArgOp,
+  BUDGET_SCOPES,
+  type BudgetScope,
   DECISIONS,
   type Decision,
   emptyBudget,
@@ -54,6 +56,7 @@ const ARG_OP_LABEL: Record<ArgOp, string> = {
 
 const PER_WHAT_LABEL: Record<PerWhat, string> = {
   execution: "per execution",
+  session: "per session",
   agent: "per agent",
   global: "across everything",
 };
@@ -594,7 +597,7 @@ function RuleCard({
           </div>
         )}
 
-        {/* Counted across the whole execution, and only on a rule that allows. */}
+        {/* Counted across the whole execution or session, and only on a rule that allows. */}
         {rule.budget && (
           <div className="ml-1 space-y-1 border-l-2 border-purple-100 pl-2 dark:border-purple-900">
             <div className="flex items-center gap-1.5">
@@ -607,9 +610,22 @@ function RuleCard({
                 className={`${field} font-mono w-24`}
                 aria-label="Max tokens"
               />
-              <span className="text-[11px] text-ink-muted">
-                tokens per execution, then
-              </span>
+              <span className="text-[11px] text-ink-muted">tokens per</span>
+              <select
+                value={rule.budget.scope}
+                onChange={(e) =>
+                  patchBudget({ scope: e.target.value as BudgetScope })
+                }
+                className={field}
+                aria-label="Budget scope"
+              >
+                {BUDGET_SCOPES.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-muted">then</span>
               <select
                 value={rule.budget.onExceed}
                 onChange={(e) =>

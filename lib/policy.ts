@@ -5,9 +5,10 @@ export type Verdict = Exclude<Decision, "judge">;
 export type StepKind = "tool_call" | "llm_call" | "local";
 export type ArgOp = "equals" | "contains" | "one_of" | "regex";
 export type DefaultAction = "allow" | "deny";
-export type PerWhat = "execution" | "agent" | "global";
+export type PerWhat = "execution" | "session" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
 export type OnExceed = "deny" | "require_approval";
+export type BudgetScope = "execution" | "session";
 
 export const DECISIONS: Decision[] = [
   "allow",
@@ -18,9 +19,10 @@ export const DECISIONS: Decision[] = [
 export const VERDICTS: Verdict[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
-export const PER_WHATS: PerWhat[] = ["execution", "agent", "global"];
+export const PER_WHATS: PerWhat[] = ["execution", "session", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
 export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
+export const BUDGET_SCOPES: BudgetScope[] = ["execution", "session"];
 
 export interface ArgCondition {
   uid: string;
@@ -33,6 +35,7 @@ export interface ArgCondition {
 /** maxTokens stays a string so a half-typed field is empty, not NaN. */
 export interface Budget {
   maxTokens: string;
+  scope: BudgetScope;
   onExceed: OnExceed;
 }
 
@@ -118,7 +121,7 @@ export function emptyRateLimit(): RateLimit {
 }
 
 export function emptyBudget(): Budget {
-  return { maxTokens: "", onExceed: "deny" };
+  return { maxTokens: "", scope: "execution", onExceed: "deny" };
 }
 
 export function emptyDraft(): PolicyDraft {
@@ -199,6 +202,7 @@ function ruleToYaml(r: RuleDraft): Record<string, unknown> {
     const b: Record<string, unknown> = {
       max_tokens: Number(r.budget.maxTokens),
     };
+    if (r.budget.scope !== "execution") b.scope = r.budget.scope;
     // Anything but require_approval denies, so leave the deny case implicit.
     if (r.budget.onExceed !== "deny") b.on_exceed = r.budget.onExceed;
     then.budget = b;
@@ -240,7 +244,7 @@ const THEN_KEYS = new Set([
 ]);
 const JUDGE_KEYS = new Set(["instructions", "threshold", "fallback"]);
 const APPROVAL_KEYS = new Set(["approvers", "timeout", "message"]);
-const BUDGET_KEYS = new Set(["max_tokens", "on_exceed"]);
+const BUDGET_KEYS = new Set(["max_tokens", "scope", "on_exceed"]);
 const RATE_LIMIT_KEYS = new Set([
   "max_calls",
   "window",
@@ -369,6 +373,15 @@ function toBudget(raw: unknown, where: string): Budget {
     throw new Error(`${where}: budget max_tokens must be a whole number`);
   }
 
+  let scope: BudgetScope = "execution";
+  if (b.scope !== undefined) {
+    const s = asString(b.scope, `${where} budget scope`);
+    if (!BUDGET_SCOPES.includes(s as BudgetScope)) {
+      throw new Error(`${where}: budget scope must be execution or session`);
+    }
+    scope = s as BudgetScope;
+  }
+
   let onExceed: OnExceed = "deny";
   if (b.on_exceed !== undefined) {
     const e = asString(b.on_exceed, `${where} budget on_exceed`);
@@ -382,7 +395,7 @@ function toBudget(raw: unknown, where: string): Budget {
     onExceed = e as OnExceed;
   }
 
-  return { maxTokens: String(b.max_tokens), onExceed };
+  return { maxTokens: String(b.max_tokens), scope, onExceed };
 }
 
 function toJudge(raw: unknown, where: string): Judge {

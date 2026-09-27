@@ -142,14 +142,17 @@ rules:
       decision: allow
       budget:
         max_tokens: 500
+        scope: session
         on_exceed: require_approval
 `);
     expect(d.rules[0].budget).toEqual({
       maxTokens: "100000",
+      scope: "execution",
       onExceed: "deny",
     });
     expect(d.rules[1].budget).toEqual({
       maxTokens: "500",
+      scope: "session",
       onExceed: "require_approval",
     });
   });
@@ -222,6 +225,10 @@ rules:
     [
       "unknown on_exceed",
       "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, on_exceed: warn } }\n",
+    ],
+    [
+      "unknown budget scope",
+      "rules:\n  - id: a\n    then: { decision: allow, budget: { max_tokens: 100, scope: agent } }\n",
     ],
     [
       "fractional max_tokens",
@@ -402,7 +409,10 @@ describe("serializeDraft", () => {
     const d: PolicyDraft = {
       defaultAction: "deny",
       rules: [
-        rule({ id: "a", budget: { maxTokens: "100000", onExceed: "deny" } }),
+        rule({
+          id: "a",
+          budget: { maxTokens: "100000", scope: "execution", onExceed: "deny" },
+        }),
       ],
     };
     const out = serializeDraft(d);
@@ -418,7 +428,11 @@ describe("serializeDraft", () => {
       rules: [
         rule({
           id: "a",
-          budget: { maxTokens: "500", onExceed: "require_approval" },
+          budget: {
+            maxTokens: "500",
+            scope: "session",
+            onExceed: "require_approval",
+          },
         }),
       ],
     };
@@ -548,7 +562,10 @@ describe("validateDraft", () => {
     ["zero max tokens", "0"],
     ["fractional max tokens", "2.5"],
   ])("blocks a budget with %s", (_name, maxTokens) => {
-    const r = rule({ id: "a", budget: { maxTokens, onExceed: "deny" } });
+    const r = rule({
+      id: "a",
+      budget: { maxTokens, scope: "execution", onExceed: "deny" },
+    });
     expect(
       validateDraft({ defaultAction: "deny", rules: [r] })[r.uid][0],
     ).toMatch(/max tokens/);
@@ -640,7 +657,7 @@ describe("lintDraft", () => {
       id: "a",
       targets: ["x"],
       decision: "require_approval",
-      budget: { maxTokens: "100", onExceed: "deny" },
+      budget: { maxTokens: "100", scope: "execution", onExceed: "deny" },
     });
     expect(lintDraft({ defaultAction: "deny", rules: [a] })[a.uid][0]).toMatch(
       /Budget is ignored/,
@@ -652,7 +669,7 @@ describe("lintDraft", () => {
       id: "a",
       targets: ["x"],
       decision: "judge",
-      budget: { maxTokens: "100", onExceed: "deny" },
+      budget: { maxTokens: "100", scope: "execution", onExceed: "deny" },
     });
     expect(lintDraft({ defaultAction: "deny", rules: [a] })).toEqual({});
   });
