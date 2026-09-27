@@ -133,6 +133,30 @@ export default function ExecutionDetailView({
               Deadline {new Date(execution.deadline_at).toLocaleString()}
             </span>
           )}
+          {execution.session && <span>Session {execution.session}</span>}
+          {execution.parent_execution_id && (
+            <span>
+              Continues{" "}
+              <Link
+                href={`/executions/${execution.parent_execution_id}`}
+                className="font-mono text-[11px] text-accent hover:underline"
+              >
+                {execution.parent_execution_id}
+              </Link>
+            </span>
+          )}
+          {execution.forked_from && (
+            <span>
+              Forked from{" "}
+              <Link
+                href={`/executions/${execution.forked_from}`}
+                className="font-mono text-[11px] text-accent hover:underline"
+              >
+                {execution.forked_from}
+              </Link>{" "}
+              at event {execution.fork_seq}
+            </span>
+          )}
         </div>
         {execution.failure_reason && (
           <p

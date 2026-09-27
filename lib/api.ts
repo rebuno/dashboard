@@ -5,6 +5,10 @@ export interface Execution {
   status: string;
   output?: unknown;
   failure_reason?: string;
+  session?: string;
+  parent_execution_id?: string;
+  forked_from?: string;
+  fork_seq?: number;
   created_at: string;
   updated_at: string;
   deadline_at?: string;
