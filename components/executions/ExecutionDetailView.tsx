@@ -1,19 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import EventsPanel from "@/components/executions/EventsPanel";
 import StepsPanel from "@/components/executions/StepsPanel";
 import JsonBlock from "@/components/JsonBlock";
 import StatusBadge from "@/components/StatusBadge";
-import {
-  cancelExecution,
-  type Execution,
-  getEvents,
-  getExecution,
-} from "@/lib/api";
+import { cancelExecution, type Execution, getExecution } from "@/lib/api";
 import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
-import { usePolling } from "@/lib/hooks";
+import { useExecutionEvents, usePolling } from "@/lib/hooks";
 
 export default function ExecutionDetailView({
   executionId,
@@ -27,25 +22,12 @@ export default function ExecutionDetailView({
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const [lastEventAt, setLastEventAt] = useState<string | null>(null);
-  const lastSeq = useRef(0);
-
-  useEffect(() => {
-    lastSeq.current = 0;
-    setLastEventAt(null);
-  }, [executionId]);
+  const eventLog = useExecutionEvents(executionId);
+  const lastEventAt = eventLog.events.at(-1)?.occurred_at;
 
   const load = useCallback(async () => {
     try {
       setExecution(await getExecution(executionId));
-      const batch = await getEvents(executionId, lastSeq.current);
-      if (batch.length > 0) {
-        lastSeq.current = Math.max(
-          lastSeq.current,
-          ...batch.map((e) => e.event_seq),
-        );
-        setLastEventAt(batch[batch.length - 1].occurred_at);
-      }
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load execution");
@@ -208,9 +190,13 @@ export default function ExecutionDetailView({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "steps" ? (
-          <StepsPanel key={executionId} executionId={executionId} />
+          <StepsPanel
+            key={executionId}
+            executionId={executionId}
+            events={eventLog.events}
+          />
         ) : (
-          <EventsPanel key={executionId} executionId={executionId} />
+          <EventsPanel {...eventLog} />
         )}
       </div>
     </div>

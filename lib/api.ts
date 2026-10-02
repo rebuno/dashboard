@@ -1,3 +1,5 @@
+import { EVENT_PAGE_SIZE } from "./constants";
+
 export interface Execution {
   id: string;
   agent_id: string;
@@ -41,6 +43,26 @@ export interface Step {
   error?: unknown;
   started_at?: string;
   completed_at?: string;
+}
+
+export interface ResourceCheckpoint {
+  key: string;
+  generation: number;
+  checkpoint_ref: string;
+  covered_seq: number;
+  invalidated_seq?: number;
+}
+
+export interface ForkPoints {
+  latest_seq: number;
+  resources: Record<string, number>;
+  checkpoints: ResourceCheckpoint[];
+}
+
+export interface ResourceSelection {
+  checkpoint_ref?: string;
+  checkpoint_seq?: number;
+  covered: boolean;
 }
 
 export interface Approval {
@@ -126,10 +148,33 @@ export async function cancelExecution(id: string): Promise<void> {
   await request("POST", `/api/v0/executions/${encodeURIComponent(id)}/cancel`);
 }
 
+export async function forkExecution(
+  id: string,
+  params: { at_seq: number; session?: string; policy_bundle?: string },
+): Promise<Execution> {
+  return request(
+    "POST",
+    `/api/v0/executions/${encodeURIComponent(id)}/fork`,
+    params,
+  );
+}
+
+export async function getForkPoints(id: string): Promise<ForkPoints> {
+  const data = await request(
+    "GET",
+    `/api/v0/executions/${encodeURIComponent(id)}/fork-points`,
+  );
+  return {
+    latest_seq: data?.latest_seq ?? 0,
+    resources: data?.resources ?? {},
+    checkpoints: data?.checkpoints ?? [],
+  };
+}
+
 export async function getEvents(
   executionId: string,
   afterSeq = 0,
-  limit = 200,
+  limit = EVENT_PAGE_SIZE,
 ): Promise<Event[]> {
   const qs = new URLSearchParams({
     after_seq: String(afterSeq),

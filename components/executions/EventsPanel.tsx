@@ -1,53 +1,14 @@
-"use client";
+import type { Event } from "@/lib/api";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { type Event, getEvents } from "@/lib/api";
-import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
-import { usePolling } from "@/lib/hooks";
-
-const eventCache = new Map<string, { events: Event[]; lastSeq: number }>();
-
-export default function EventsPanel({ executionId }: { executionId: string }) {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const lastSeq = useRef(0);
-
-  useEffect(() => {
-    const cached = eventCache.get(executionId);
-    setEvents(cached?.events ?? []);
-    lastSeq.current = cached?.lastSeq ?? 0;
-    setLoading(!cached);
-    setError(null);
-  }, [executionId]);
-
-  const load = useCallback(async () => {
-    try {
-      const batch = await getEvents(executionId, lastSeq.current);
-      if (batch.length > 0) {
-        lastSeq.current = Math.max(
-          lastSeq.current,
-          ...batch.map((e) => e.event_seq),
-        );
-        setEvents((prev) => {
-          const next = [...prev, ...batch];
-          eventCache.set(executionId, {
-            events: next,
-            lastSeq: lastSeq.current,
-          });
-          return next;
-        });
-      }
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load events");
-    } finally {
-      setLoading(false);
-    }
-  }, [executionId]);
-
-  usePolling(load, EXECUTION_DETAIL_POLL_INTERVAL, [executionId]);
-
+export default function EventsPanel({
+  events,
+  error,
+  loading,
+}: {
+  events: Event[];
+  error: string | null;
+  loading: boolean;
+}) {
   if (loading)
     return <div className="p-5 text-sm text-ink-muted">Loading events…</div>;
   if (error)
