@@ -52,7 +52,7 @@ Requires Node 24 and a running Rebuno kernel.
 
 ## Documentation
 
-[Dashboard](https://github.com/rebuno/rebuno/blob/main/docs/dashboard.md): what
+[Dashboard](https://github.com/rebuno/rebuno/blob/main/docs/dashboard.mdx): what
 each page does, how it reaches the kernel, and how to deploy it.
 
 ## License
