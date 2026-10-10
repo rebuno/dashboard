@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CreateExecutionForm from "@/components/executions/CreateExecutionForm";
 import StatusBadge from "@/components/StatusBadge";
 import { type Execution, listExecutions } from "@/lib/api";
 import { EXECUTION_LIST_POLL_INTERVAL } from "@/lib/constants";
+import { executionHref } from "@/lib/execution-tree";
 import { usePolling } from "@/lib/hooks";
 
 const STATUS_OPTIONS = [
@@ -19,29 +20,45 @@ const STATUS_OPTIONS = [
   "cancelled",
 ];
 
-export default function ExecutionListPanel() {
+export default function ExecutionListPanel({
+  active: visible = true,
+}: {
+  active?: boolean;
+}) {
   const pathname = usePathname();
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const generation = useRef(0);
+  useEffect(() => {
+    generation.current++;
+  }, [statusFilter, visible, refreshNonce]);
 
   const load = useCallback(async () => {
+    if (!visible) return;
+    const current = generation.current;
     try {
       const page = await listExecutions(
         statusFilter ? { status: statusFilter } : undefined,
       );
+      if (current !== generation.current) return;
       setExecutions(page.executions);
       setError(null);
     } catch (e) {
+      if (current !== generation.current) return;
       setError(e instanceof Error ? e.message : "Failed to load executions");
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, visible]);
 
-  usePolling(load, EXECUTION_LIST_POLL_INTERVAL, [statusFilter, refreshNonce]);
+  usePolling(load, EXECUTION_LIST_POLL_INTERVAL, [
+    statusFilter,
+    refreshNonce,
+    visible,
+  ]);
 
   const hasSelection = pathname !== "/executions";
 
@@ -98,7 +115,7 @@ export default function ExecutionListPanel() {
           return (
             <Link
               key={exec.id}
-              href={`/executions/${exec.id}`}
+              href={executionHref(exec.id)}
               className={`relative block border-b border-line px-4 py-3.5 transition-colors ${
                 active ? "bg-accent-wash" : "hover:bg-surface-muted"
               }`}
@@ -113,7 +130,14 @@ export default function ExecutionListPanel() {
                 <StatusBadge status={exec.status} />
               </div>
               <div className="flex items-center justify-between gap-3 text-xs text-ink-muted">
-                <span className="truncate">{exec.agent_id}</span>
+                <span className="truncate">
+                  {exec.agent_id}
+                  {exec.spawned_by && (
+                    <span className="ml-2 text-[10px] text-accent">
+                      Subagent
+                    </span>
+                  )}
+                </span>
                 <span className="shrink-0 tabular-nums">
                   {new Date(exec.created_at).toLocaleTimeString()}
                 </span>

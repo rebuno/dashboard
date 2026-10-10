@@ -1,4 +1,5 @@
-import ExecutionListPanel from "@/components/executions/ExecutionListPanel";
+import { Suspense } from "react";
+import ExecutionWorkspace from "@/components/executions/ExecutionWorkspace";
 
 export default function ExecutionsLayout({
   children,
@@ -6,11 +7,12 @@ export default function ExecutionsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col bg-canvas md:flex-row">
-      <ExecutionListPanel />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface">
-        {children}
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="p-5 text-sm text-ink-muted">Loading executions…</div>
+      }
+    >
+      <ExecutionWorkspace>{children}</ExecutionWorkspace>
+    </Suspense>
   );
 }

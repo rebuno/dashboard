@@ -1,54 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import EventsPanel from "@/components/executions/EventsPanel";
+import { useExecutionWorkspace } from "@/components/executions/ExecutionWorkspace";
 import StepsPanel from "@/components/executions/StepsPanel";
 import JsonBlock from "@/components/JsonBlock";
 import StatusBadge from "@/components/StatusBadge";
-import { cancelExecution, type Execution, getExecution } from "@/lib/api";
-import { EXECUTION_DETAIL_POLL_INTERVAL } from "@/lib/constants";
-import { useExecutionEvents, usePolling } from "@/lib/hooks";
+import {
+  executionHref,
+  isTerminal as executionIsTerminal,
+  executionLabel,
+} from "@/lib/execution-tree";
+import { useExecutionEvents } from "@/lib/hooks";
 
 export default function ExecutionDetailView({
   executionId,
 }: {
   executionId: string;
 }) {
-  const [execution, setExecution] = useState<Execution | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { tree, store, treeMode, actions, cancel } = useExecutionWorkspace();
+  const params = useSearchParams();
+  const router = useRouter();
+  const execution =
+    tree.selectedId === executionId ? tree.nodes[executionId] : undefined;
+  const error = tree.error;
+  const loading = tree.loading || tree.selectedId !== executionId;
   const [tab, setTab] = useState<"steps" | "events">("steps");
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancelling = actions[executionId]?.pending;
+  const cancelError = actions[executionId]?.error;
 
   const eventLog = useExecutionEvents(executionId);
   const lastEventAt = eventLog.events.at(-1)?.occurred_at;
 
-  const load = useCallback(async () => {
-    try {
-      setExecution(await getExecution(executionId));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load execution");
-    } finally {
-      setLoading(false);
-    }
-  }, [executionId]);
-
-  usePolling(load, EXECUTION_DETAIL_POLL_INTERVAL, [executionId]);
-
   async function handleCancel() {
-    setCancelling(true);
-    setCancelError(null);
-    try {
-      await cancelExecution(executionId);
-      await load();
-    } catch (e) {
-      setCancelError(e instanceof Error ? e.message : "Failed to cancel");
-    } finally {
-      setCancelling(false);
-    }
+    setConfirmCancel(false);
+    await cancel(executionId);
   }
 
   if (loading)
@@ -57,21 +46,71 @@ export default function ExecutionDetailView({
         Loading execution…
       </div>
     );
-  if (error)
+  if (error && !execution)
     return (
       <div className="m-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
         {error}
+        <button
+          type="button"
+          onClick={() => void store.refresh()}
+          className="ml-3 underline"
+        >
+          Retry
+        </button>
       </div>
     );
   if (!execution) return null;
 
-  const isTerminal = ["completed", "failed", "cancelled"].includes(
-    execution.status,
+  const isTerminal = executionIsTerminal(execution);
+  const branch = tree.branches[executionId];
+  const liveChildren = (branch?.ids ?? []).filter(
+    (id) =>
+      !executionIsTerminal(tree.nodes[id]) &&
+      branch?.steps?.some(
+        (step) =>
+          step.step_id === tree.nodes[id].spawned_by?.step_id &&
+          step.status === "executing",
+      ),
   );
+  const approvals =
+    branch?.steps?.filter((step) => step.status === "awaiting_approval")
+      .length ?? 0;
+  const spawning = execution.spawned_by;
+  const parent = spawning ? tree.nodes[spawning.execution_id] : undefined;
+  const parentStep = spawning
+    ? tree.branches[spawning.execution_id]?.steps?.find(
+        (step) => step.step_id === spawning.step_id,
+      )
+    : undefined;
+  const activeTab = params.get("step") ? "steps" : tab;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="border-b border-line px-5 py-5 md:px-6">
+        {treeMode && tree.path.length > 1 && (
+          <nav
+            aria-label="Execution ancestors"
+            className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted"
+          >
+            {tree.path.map((id, index) => (
+              <span key={id} className="inline-flex items-center gap-2">
+                {index > 0 && <span aria-hidden="true">/</span>}
+                <Link
+                  replace
+                  href={executionHref(id, { tree: true })}
+                  aria-current={id === executionId ? "page" : undefined}
+                  className="max-w-40 truncate hover:text-accent"
+                >
+                  {tree.turns.length > 1 &&
+                  tree.turns.includes(id) &&
+                  !tree.turnsTruncated
+                    ? `Turn ${tree.turns.indexOf(id) + 1}`
+                    : executionLabel(tree.nodes[id])}
+                </Link>
+              </span>
+            ))}
+          </nav>
+        )}
         <Link
           href="/executions"
           className="mb-4 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink md:hidden"
@@ -82,23 +121,118 @@ export default function ExecutionDetailView({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="truncate text-lg font-semibold tracking-[-0.02em]">
-                {execution.agent_id}
+                {executionLabel(execution)}
               </h1>
+              {executionLabel(execution) !== execution.agent_id && (
+                <span className="text-xs text-ink-muted">
+                  {execution.agent_id}
+                </span>
+              )}
               <StatusBadge status={execution.status} />
             </div>
             <code className="mt-1.5 block truncate text-[11px] text-ink-muted">
               {execution.id}
             </code>
           </div>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isTerminal || cancelling}
-            className="button-danger shrink-0"
-          >
-            {cancelling ? "Cancelling…" : "Cancel"}
-          </button>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            {!treeMode && (
+              <Link
+                href={executionHref(executionId, { tree: true })}
+                className="button-secondary"
+              >
+                View tree
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setConfirmCancel(true)}
+              disabled={isTerminal || cancelling}
+              className="button-danger shrink-0"
+            >
+              {cancelling ? "Cancelling…" : "Cancel"}
+            </button>
+          </div>
         </div>
+        {spawning && (
+          <div className="mt-4 rounded-md border border-line bg-surface-muted px-3 py-2.5 text-xs text-ink-muted">
+            Spawned by{" "}
+            <Link
+              replace={treeMode}
+              href={executionHref(spawning.execution_id, { tree: treeMode })}
+              className="font-medium text-accent hover:underline"
+            >
+              {parent ? executionLabel(parent) : spawning.execution_id}
+            </Link>
+            <span className="mx-1.5">via</span>
+            <Link
+              replace={treeMode}
+              href={executionHref(spawning.execution_id, {
+                tree: treeMode,
+                stepId: spawning.step_id,
+              })}
+              className="font-mono text-[11px] text-accent hover:underline"
+              title={spawning.step_id}
+            >
+              {parentStep?.target ?? `step ${spawning.step_id.slice(0, 8)}`}{" "}
+              <span aria-hidden="true">↗</span>
+            </Link>
+            {isTerminal && parentStep?.status === "executing" && (
+              <p className="mt-1.5">Result pending in parent step.</p>
+            )}
+          </div>
+        )}
+        {(liveChildren.length > 0 || approvals > 0) && (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+            {liveChildren.length > 0 && (
+              <span>
+                {branch?.error || branch?.nextCursor ? "At least " : ""}
+                {liveChildren.length} live subagent
+                {liveChildren.length === 1 ? "" : "s"}
+                {branch?.error || branch?.stepsError ? " · last known" : ""}
+              </span>
+            )}
+            {approvals > 0 && (
+              <Link href="/approvals" className="text-accent hover:underline">
+                {approvals} step{approvals === 1 ? "" : "s"} awaiting approval ↗
+                {branch?.stepsError ? " · last known" : ""}
+              </Link>
+            )}
+          </div>
+        )}
+        {error && (
+          <p
+            className="mt-3 text-xs text-red-600 dark:text-red-400"
+            role="status"
+          >
+            Updates paused: {error}
+          </p>
+        )}
+        {confirmCancel && !isTerminal && (
+          <div className="mt-4 rounded-md border border-line-strong bg-surface-muted p-3 text-xs">
+            <p className="font-medium">
+              Cancel this execution and its live subagents?
+            </p>
+            {spawning && (
+              <p className="mt-1 text-ink-muted">Its parent step will fail.</p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="button-danger"
+              >
+                Cancel execution
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(false)}
+                className="button-secondary"
+              >
+                Keep running
+              </button>
+            </div>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-muted">
           <span>Created {new Date(execution.created_at).toLocaleString()}</span>
           <span>
@@ -120,7 +254,12 @@ export default function ExecutionDetailView({
             <span>
               Continues{" "}
               <Link
-                href={`/executions/${execution.parent_execution_id}`}
+                replace={
+                  treeMode && !!tree.nodes[execution.parent_execution_id]
+                }
+                href={executionHref(execution.parent_execution_id, {
+                  tree: treeMode,
+                })}
                 className="font-mono text-[11px] text-accent hover:underline"
               >
                 {execution.parent_execution_id}
@@ -131,7 +270,9 @@ export default function ExecutionDetailView({
             <span>
               Forked from{" "}
               <Link
-                href={`/executions/${execution.forked_from}`}
+                href={executionHref(execution.forked_from, {
+                  tree: treeMode,
+                })}
                 className="font-mono text-[11px] text-accent hover:underline"
               >
                 {execution.forked_from}
@@ -175,11 +316,17 @@ export default function ExecutionDetailView({
           <button
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => {
+              setTab(t);
+              if (params.has("step"))
+                router.replace(executionHref(executionId, { tree: treeMode }), {
+                  scroll: false,
+                });
+            }}
             role="tab"
-            aria-selected={tab === t}
+            aria-selected={activeTab === t}
             className={`relative py-3 text-sm font-medium transition-colors ${
-              tab === t
+              activeTab === t
                 ? "text-accent after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-accent"
                 : "text-ink-muted hover:text-ink"
             }`}
@@ -189,7 +336,7 @@ export default function ExecutionDetailView({
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === "steps" ? (
+        {activeTab === "steps" ? (
           <StepsPanel
             key={executionId}
             executionId={executionId}

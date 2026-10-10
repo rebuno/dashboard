@@ -9,6 +9,7 @@ export interface Execution {
   failure_reason?: string;
   session?: string;
   parent_execution_id?: string;
+  spawned_by?: { execution_id: string; step_id: string };
   forked_from?: string;
   fork_seq?: number;
   created_at: string;
@@ -86,10 +87,16 @@ export interface Agent {
   registered_at: string;
 }
 
-async function request(method: string, path: string, body?: unknown) {
+async function request(
+  method: string,
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+) {
   const opts: RequestInit = {
     method,
     headers: { "Content-Type": "application/json" },
+    signal,
   };
   if (body !== undefined) opts.body = JSON.stringify(body);
   const resp = await fetch(path, opts);
@@ -111,21 +118,35 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
-export async function listExecutions(params?: {
-  status?: string;
-  agent_id?: string;
-  cursor?: string;
-  limit?: number;
-}): Promise<ExecutionPage> {
+export async function listExecutions(
+  params?: {
+    status?: string;
+    agent_id?: string;
+    cursor?: string;
+    limit?: number;
+    spawned_by?: string;
+    session?: string;
+    parent_execution_id?: string;
+    forked_from?: string;
+  },
+  signal?: AbortSignal,
+): Promise<ExecutionPage> {
   const qs = new URLSearchParams();
   if (params?.status) qs.set("status", params.status);
   if (params?.agent_id) qs.set("agent_id", params.agent_id);
+  if (params?.session) qs.set("session", params.session);
+  if (params?.parent_execution_id)
+    qs.set("parent_execution_id", params.parent_execution_id);
+  if (params?.forked_from) qs.set("forked_from", params.forked_from);
+  if (params?.spawned_by) qs.set("spawned_by", params.spawned_by);
   if (params?.cursor) qs.set("cursor", params.cursor);
   if (params?.limit != null) qs.set("limit", String(params.limit));
   const query = qs.toString();
   const data = await request(
     "GET",
     `/api/v0/executions${query ? `?${query}` : ""}`,
+    undefined,
+    signal,
   );
   return { executions: data?.executions ?? [], next_cursor: data?.next_cursor };
 }
@@ -140,8 +161,16 @@ export async function createExecution(
   });
 }
 
-export async function getExecution(id: string): Promise<Execution> {
-  return request("GET", `/api/v0/executions/${encodeURIComponent(id)}`);
+export async function getExecution(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Execution> {
+  return request(
+    "GET",
+    `/api/v0/executions/${encodeURIComponent(id)}`,
+    undefined,
+    signal,
+  );
 }
 
 export async function cancelExecution(id: string): Promise<void> {
@@ -187,10 +216,15 @@ export async function getEvents(
   return data ?? [];
 }
 
-export async function listSteps(executionId: string): Promise<Step[]> {
+export async function listSteps(
+  executionId: string,
+  signal?: AbortSignal,
+): Promise<Step[]> {
   const data = await request(
     "GET",
     `/api/v0/executions/${encodeURIComponent(executionId)}/steps`,
+    undefined,
+    signal,
   );
   return data ?? [];
 }
