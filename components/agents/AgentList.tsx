@@ -92,6 +92,11 @@ export default function AgentList({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold">{agent.id}</div>
+                  {agent.description && (
+                    <div className="mt-0.5 text-xs text-ink-soft">
+                      {agent.description}
+                    </div>
+                  )}
                   <div className="truncate font-mono text-[11px] text-ink-muted">
                     {agent.webhook_url}
                   </div>
@@ -136,6 +141,28 @@ export default function AgentList({
                 <p className="text-xs text-red-600 dark:text-red-400">
                   {errors[agent.id]}
                 </p>
+              )}
+              {(agent.input_schema || agent.output_schema) && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {(
+                    [
+                      ["Input schema", agent.input_schema],
+                      ["Output schema", agent.output_schema],
+                    ] as const
+                  ).map(
+                    ([label, schema]) =>
+                      schema && (
+                        <div key={label} className="min-w-0">
+                          <div className="mb-1.5 text-xs font-medium text-ink-muted">
+                            {label}
+                          </div>
+                          <pre className="field-control max-h-64 overflow-auto px-2.5 py-1.5 font-mono text-[11px] leading-relaxed">
+                            {JSON.stringify(schema, null, 2)}
+                          </pre>
+                        </div>
+                      ),
+                  )}
+                </div>
               )}
               {/* Kept mounted while collapsed so an in-progress edit survives. */}
               <PolicyEditor

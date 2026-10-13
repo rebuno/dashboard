@@ -80,11 +80,16 @@ export interface Approval {
   created_at: string;
 }
 
+export type JsonSchema = Record<string, unknown>;
+
 export interface Agent {
   id: string;
   webhook_url: string;
   policy_bundle?: string;
   registered_at: string;
+  description?: string;
+  input_schema?: JsonSchema;
+  output_schema?: JsonSchema;
 }
 
 async function request(

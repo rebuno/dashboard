@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { createExecution } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { type Agent, createExecution, listAgents } from "@/lib/api";
+import { inputSkeleton } from "@/lib/schema";
 
 export default function CreateExecutionForm({
   onCreated,
@@ -13,6 +14,36 @@ export default function CreateExecutionForm({
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [agentsError, setAgentsError] = useState("");
+
+  useEffect(() => {
+    if (!expanded) return;
+    let cancelled = false;
+    listAgents()
+      .then((list) => {
+        if (cancelled) return;
+        setAgents(list);
+        setAgentsError("");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setAgentsError(
+          err instanceof Error ? err.message : "Failed to load agents",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded]);
+
+  const selected = agents?.find((a) => a.id === agentId);
+
+  function selectAgent(id: string) {
+    setAgentId(id);
+    const schema = agents?.find((a) => a.id === id)?.input_schema;
+    setInput(schema ? JSON.stringify(inputSkeleton(schema), null, 2) : "{}");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,15 +93,40 @@ export default function CreateExecutionForm({
             >
               Agent ID
             </label>
-            <input
+            <select
               id="new-execution-agent"
-              type="text"
               value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
+              onChange={(e) => selectAgent(e.target.value)}
               required
+              disabled={agents === null}
               className="field-control w-full px-2.5 py-1.5 text-sm"
-              placeholder="e.g. researcher"
-            />
+            >
+              <option value="" disabled>
+                {agents === null
+                  ? "Loading agents…"
+                  : agents.length === 0
+                    ? "No agents registered"
+                    : "Select an agent"}
+              </option>
+              {agents?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.id}
+                </option>
+              ))}
+            </select>
+            {selected?.description && (
+              <p className="mt-1.5 text-xs text-ink-muted">
+                {selected.description}
+              </p>
+            )}
+            {agentsError && (
+              <p
+                className="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                role="alert"
+              >
+                {agentsError}
+              </p>
+            )}
           </div>
           <div>
             <label
@@ -83,7 +139,7 @@ export default function CreateExecutionForm({
               id="new-execution-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              rows={3}
+              rows={Math.min(12, Math.max(3, input.split("\n").length))}
               className="field-control w-full px-2.5 py-1.5 font-mono text-xs leading-relaxed"
             />
           </div>
