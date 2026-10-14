@@ -5,6 +5,7 @@ import PolicyDiff from "@/components/agents/PolicyDiff";
 import { loadPolicy } from "@/lib/api";
 import {
   ARG_OPS,
+  type ArgCondition,
   type ArgOp,
   BUDGET_SCOPES,
   type BudgetScope,
@@ -12,8 +13,15 @@ import {
   type Decision,
   emptyBudget,
   emptyDraft,
+  emptyHistoryClause,
   emptyRateLimit,
   emptyRule,
+  HISTORY_AGGREGATES,
+  HISTORY_ARG_OPS,
+  HISTORY_SCOPES,
+  type HistoryAggregate,
+  type HistoryClause,
+  type HistoryScope,
   LIMITER_ERRORS,
   type LimiterError,
   lintDraft,
@@ -52,6 +60,18 @@ const ARG_OP_LABEL: Record<ArgOp, string> = {
   contains: "contains",
   one_of: "is one of",
   regex: "matches regex",
+  equals_arg: "equals this call's",
+};
+
+const HISTORY_SCOPE_LABEL: Record<HistoryScope, string> = {
+  execution: "in this execution",
+  session: "in this session",
+};
+
+const HISTORY_AGGREGATE_LABEL: Record<HistoryAggregate, string> = {
+  count: "number of steps",
+  sum: "sum of",
+  distinct: "distinct values of",
 };
 
 const PER_WHAT_LABEL: Record<PerWhat, string> = {
@@ -137,6 +157,205 @@ function TokenInput({
   );
 }
 
+function ArgRows({
+  label,
+  args,
+  ops,
+  onChange,
+}: {
+  label: string;
+  args: ArgCondition[];
+  ops: ArgOp[];
+  onChange: (args: ArgCondition[]) => void;
+}) {
+  function patch(argUid: string, p: Partial<ArgCondition>) {
+    onChange(args.map((a) => (a.uid === argUid ? { ...a, ...p } : a)));
+  }
+  return args.map((a) => (
+    <div key={a.uid} className="flex items-center gap-1.5">
+      <span className={rowLabel}>{label}</span>
+      <input
+        value={a.key}
+        onChange={(e) => patch(a.uid, { key: e.target.value })}
+        placeholder="command"
+        spellCheck={false}
+        className={`${field} font-mono w-28`}
+        aria-label={`${label} name`}
+      />
+      <select
+        value={a.op}
+        onChange={(e) => patch(a.uid, { op: e.target.value as ArgOp })}
+        className={field}
+        aria-label={`${label} operator`}
+      >
+        {ops.map((op) => (
+          <option key={op} value={op}>
+            {ARG_OP_LABEL[op]}
+          </option>
+        ))}
+      </select>
+      {a.op === "one_of" ? (
+        <TokenInput
+          values={a.values}
+          onChange={(v) => patch(a.uid, { values: v })}
+          placeholder="value"
+        />
+      ) : (
+        <input
+          value={a.value}
+          onChange={(e) => patch(a.uid, { value: e.target.value })}
+          placeholder={a.op === "equals_arg" ? "argument name" : ""}
+          spellCheck={false}
+          className={`${field} font-mono flex-1 min-w-0`}
+          aria-label={`${label} value`}
+        />
+      )}
+      <button
+        type="button"
+        onClick={() => onChange(args.filter((x) => x.uid !== a.uid))}
+        className={removeButton}
+        aria-label={`Remove ${label.toLowerCase()} condition`}
+      >
+        ×
+      </button>
+    </div>
+  ));
+}
+
+function newArg(): ArgCondition {
+  return { uid: uid(), key: "", op: "equals", value: "", values: [] };
+}
+
+function HistoryBlock({
+  clause,
+  onPatch,
+  onRemove,
+}: {
+  clause: HistoryClause;
+  onPatch: (patch: Partial<HistoryClause>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="ml-1 space-y-1 border-l-2 border-teal-100 pl-2 dark:border-teal-900">
+      <div className="flex items-center gap-1.5">
+        <span className={rowLabel}>Earlier</span>
+        <TokenInput
+          values={clause.targets}
+          onChange={(v) => onPatch({ targets: v })}
+          placeholder="any target"
+        />
+        <select
+          value={clause.scope}
+          onChange={(e) => onPatch({ scope: e.target.value as HistoryScope })}
+          className={field}
+          aria-label="History scope"
+        >
+          {HISTORY_SCOPES.map((v) => (
+            <option key={v} value={v}>
+              {HISTORY_SCOPE_LABEL[v]}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onRemove}
+          className={removeButton}
+          aria-label="Remove history condition"
+        >
+          ×
+        </button>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className={rowLabel}>Within</span>
+        <input
+          value={clause.within}
+          onChange={(e) => onPatch({ within: e.target.value })}
+          spellCheck={false}
+          placeholder="any time"
+          className={`${field} font-mono w-24`}
+          aria-label="History window"
+        />
+      </div>
+      <ArgRows
+        label="Argument"
+        args={clause.args}
+        ops={HISTORY_ARG_OPS}
+        onChange={(args) => onPatch({ args })}
+      />
+      <ArgRows
+        label="Result"
+        args={clause.result}
+        ops={HISTORY_ARG_OPS}
+        onChange={(result) => onPatch({ result })}
+      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className={rowLabel}>Count</span>
+        <select
+          value={clause.aggregate}
+          onChange={(e) =>
+            onPatch({ aggregate: e.target.value as HistoryAggregate })
+          }
+          className={field}
+          aria-label="History aggregate"
+        >
+          {HISTORY_AGGREGATES.map((v) => (
+            <option key={v} value={v}>
+              {HISTORY_AGGREGATE_LABEL[v]}
+            </option>
+          ))}
+        </select>
+        {clause.aggregate !== "count" && (
+          <input
+            value={clause.aggregateArg}
+            onChange={(e) => onPatch({ aggregateArg: e.target.value })}
+            placeholder="amount"
+            spellCheck={false}
+            className={`${field} font-mono w-24`}
+            aria-label="Aggregate argument"
+          />
+        )}
+        <span className="text-[11px] text-ink-muted">at least</span>
+        <input
+          value={clause.atLeast}
+          onChange={(e) => onPatch({ atLeast: e.target.value })}
+          inputMode="decimal"
+          placeholder={clause.atMost.trim() ? "" : "1"}
+          className={`${field} font-mono w-16`}
+          aria-label="At least"
+        />
+        <span className="text-[11px] text-ink-muted">at most</span>
+        <input
+          value={clause.atMost}
+          onChange={(e) => onPatch({ atMost: e.target.value })}
+          inputMode="decimal"
+          className={`${field} font-mono w-16`}
+          aria-label="At most"
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onPatch({ args: [...clause.args, newArg()] })}
+          className="py-0.5 text-[11px] text-accent hover:underline"
+        >
+          + argument
+        </button>
+        <button
+          type="button"
+          onClick={() => onPatch({ result: [...clause.result, newArg()] })}
+          className="py-0.5 text-[11px] text-accent hover:underline"
+        >
+          + result
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-400 dark:text-gray-400">
+        Counts steps policy allowed, including failed and running ones. This
+        call counts too, unless the condition checks a result.
+      </p>
+    </div>
+  );
+}
+
 function RuleCard({
   rule,
   index,
@@ -168,19 +387,16 @@ function RuleCard({
     if (kind === "step_kind") onPatch({ stepKind: "tool_call" });
     else if (kind === "target") onPatch({ targets: [] });
     else if (kind === "agent") onPatch({ agentIds: [] });
-    else if (kind === "argument") {
-      onPatch({
-        args: [
-          ...rule.args,
-          { uid: uid(), key: "", op: "equals", value: "", values: [] },
-        ],
-      });
-    }
+    else if (kind === "argument") onPatch({ args: [...rule.args, newArg()] });
+    else if (kind === "history")
+      onPatch({ history: [...rule.history, emptyHistoryClause()] });
   }
 
-  function patchArg(argUid: string, patch: Partial<RuleDraft["args"][number]>) {
+  function patchHistory(clauseUid: string, patch: Partial<HistoryClause>) {
     onPatch({
-      args: rule.args.map((a) => (a.uid === argUid ? { ...a, ...patch } : a)),
+      history: rule.history.map((h) =>
+        h.uid === clauseUid ? { ...h, ...patch } : h,
+      ),
     });
   }
 
@@ -275,7 +491,8 @@ function RuleCard({
           {rule.stepKind === null &&
           rule.targets === null &&
           rule.agentIds === null &&
-          !rule.args.length
+          !rule.args.length &&
+          !rule.history.length
             ? "— matches every step"
             : "all of"}
         </div>
@@ -345,55 +562,22 @@ function RuleCard({
           </div>
         )}
 
-        {rule.args.map((a) => (
-          <div key={a.uid} className="flex items-center gap-1.5">
-            <span className={rowLabel}>Argument</span>
-            <input
-              value={a.key}
-              onChange={(e) => patchArg(a.uid, { key: e.target.value })}
-              placeholder="command"
-              spellCheck={false}
-              className={`${field} font-mono w-28`}
-              aria-label="Argument name"
-            />
-            <select
-              value={a.op}
-              onChange={(e) => patchArg(a.uid, { op: e.target.value as ArgOp })}
-              className={field}
-              aria-label="Argument operator"
-            >
-              {ARG_OPS.map((op) => (
-                <option key={op} value={op}>
-                  {ARG_OP_LABEL[op]}
-                </option>
-              ))}
-            </select>
-            {a.op === "one_of" ? (
-              <TokenInput
-                values={a.values}
-                onChange={(v) => patchArg(a.uid, { values: v })}
-                placeholder="value"
-              />
-            ) : (
-              <input
-                value={a.value}
-                onChange={(e) => patchArg(a.uid, { value: e.target.value })}
-                spellCheck={false}
-                className={`${field} font-mono flex-1 min-w-0`}
-                aria-label="Argument value"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() =>
-                onPatch({ args: rule.args.filter((x) => x.uid !== a.uid) })
-              }
-              className={removeButton}
-              aria-label="Remove argument condition"
-            >
-              ×
-            </button>
-          </div>
+        <ArgRows
+          label="Argument"
+          args={rule.args}
+          ops={ARG_OPS}
+          onChange={(args) => onPatch({ args })}
+        />
+
+        {rule.history.map((h) => (
+          <HistoryBlock
+            key={h.uid}
+            clause={h}
+            onPatch={(patch) => patchHistory(h.uid, patch)}
+            onRemove={() =>
+              onPatch({ history: rule.history.filter((x) => x.uid !== h.uid) })
+            }
+          />
         ))}
 
         <select
@@ -412,6 +596,7 @@ function RuleCard({
           {rule.targets === null && <option value="target">Target</option>}
           {rule.agentIds === null && <option value="agent">Agent</option>}
           <option value="argument">Argument</option>
+          <option value="history">History</option>
         </select>
 
         <div className="pt-0.5 text-[9px] font-medium uppercase tracking-[0.1em] text-ink-faint">

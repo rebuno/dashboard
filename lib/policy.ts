@@ -3,12 +3,14 @@ import { dump, load } from "js-yaml";
 export type Decision = "allow" | "deny" | "require_approval" | "judge";
 export type Verdict = Exclude<Decision, "judge">;
 export type StepKind = "tool_call" | "llm_call" | "local";
-export type ArgOp = "equals" | "contains" | "one_of" | "regex";
+export type ArgOp = "equals" | "contains" | "one_of" | "regex" | "equals_arg";
 export type DefaultAction = "allow" | "deny";
 export type PerWhat = "execution" | "session" | "agent" | "global";
 export type LimiterError = "allow" | "deny";
 export type OnExceed = "deny" | "require_approval";
 export type BudgetScope = "execution" | "session";
+export type HistoryScope = "execution" | "session";
+export type HistoryAggregate = "count" | "sum" | "distinct";
 
 export const DECISIONS: Decision[] = [
   "allow",
@@ -19,16 +21,23 @@ export const DECISIONS: Decision[] = [
 export const VERDICTS: Verdict[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
+export const HISTORY_ARG_OPS: ArgOp[] = [...ARG_OPS, "equals_arg"];
 export const PER_WHATS: PerWhat[] = ["execution", "session", "agent", "global"];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
 export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
 export const BUDGET_SCOPES: BudgetScope[] = ["execution", "session"];
+export const HISTORY_SCOPES: HistoryScope[] = ["execution", "session"];
+export const HISTORY_AGGREGATES: HistoryAggregate[] = [
+  "count",
+  "sum",
+  "distinct",
+];
 
 export interface ArgCondition {
   uid: string;
   key: string;
   op: ArgOp;
-  value: string; // equals | contains | regex
+  value: string; // equals | contains | regex | equals_arg
   values: string[]; // one_of
 }
 
@@ -48,6 +57,20 @@ export interface RateLimit {
   onLimiterError: LimiterError;
 }
 
+/** Bounds stay strings so a half-typed field is empty, not NaN. */
+export interface HistoryClause {
+  uid: string;
+  targets: string[];
+  args: ArgCondition[];
+  result: ArgCondition[];
+  scope: HistoryScope;
+  within: string; // "" = the whole scope
+  aggregate: HistoryAggregate;
+  aggregateArg: string; // sum | distinct
+  atLeast: string;
+  atMost: string;
+}
+
 /** threshold stays a string so a half-typed field is empty, not NaN. */
 export interface Judge {
   instructions: string;
@@ -63,6 +86,7 @@ export interface RuleDraft {
   targets: string[] | null;
   agentIds: string[] | null;
   args: ArgCondition[];
+  history: HistoryClause[];
   decision: Decision;
   reason: string;
   approvers: string[];
@@ -95,6 +119,7 @@ export function emptyRule(): RuleDraft {
     targets: null,
     agentIds: null,
     args: [],
+    history: [],
     decision: "allow",
     reason: "",
     approvers: [],
@@ -103,6 +128,21 @@ export function emptyRule(): RuleDraft {
     judge: emptyJudge(),
     rateLimit: null,
     budget: null,
+  };
+}
+
+export function emptyHistoryClause(): HistoryClause {
+  return {
+    uid: uid(),
+    targets: [],
+    args: [],
+    result: [],
+    scope: "execution",
+    within: "",
+    aggregate: "count",
+    aggregateArg: "",
+    atLeast: "",
+    atMost: "",
   };
 }
 
@@ -138,7 +178,8 @@ export function isCatchAll(r: RuleDraft): boolean {
     r.stepKind === null &&
     !r.targets?.length &&
     !r.agentIds?.length &&
-    r.args.length === 0
+    r.args.length === 0 &&
+    r.history.length === 0
   );
 }
 
@@ -156,6 +197,22 @@ function argsToYaml(
   return Object.keys(out).length ? out : undefined;
 }
 
+function historyToYaml(h: HistoryClause): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (h.targets.length === 1) out.target = h.targets[0];
+  else if (h.targets.length > 1) out.targets = h.targets;
+  const args = argsToYaml(h.args);
+  if (args) out.arguments = args;
+  const result = argsToYaml(h.result);
+  if (result) out.result = result;
+  if (h.scope !== "execution") out.scope = h.scope;
+  if (h.within.trim()) out.within = h.within.trim();
+  if (h.aggregate !== "count") out[h.aggregate] = h.aggregateArg.trim();
+  if (h.atLeast.trim()) out.at_least = Number(h.atLeast);
+  if (h.atMost.trim()) out.at_most = Number(h.atMost);
+  return out;
+}
+
 function ruleToYaml(r: RuleDraft): Record<string, unknown> {
   const when: Record<string, unknown> = {};
   if (r.stepKind) when.step_kind = r.stepKind;
@@ -167,6 +224,7 @@ function ruleToYaml(r: RuleDraft): Record<string, unknown> {
   else if (r.agentIds && r.agentIds.length > 1) when.agent_ids = r.agentIds;
   const args = argsToYaml(r.args);
   if (args) when.arguments = args;
+  if (r.history.length) when.history = r.history.map(historyToYaml);
 
   const then: Record<string, unknown> = { decision: r.decision };
   if (r.reason.trim()) then.reason = r.reason.trim();
@@ -233,6 +291,19 @@ const WHEN_KEYS = new Set([
   "agent_ids",
   "step_kind",
   "arguments",
+  "history",
+]);
+const HISTORY_KEYS = new Set([
+  "target",
+  "targets",
+  "arguments",
+  "result",
+  "scope",
+  "within",
+  "sum",
+  "distinct",
+  "at_least",
+  "at_most",
 ]);
 const THEN_KEYS = new Set([
   "decision",
@@ -283,13 +354,17 @@ function asStringList(v: unknown, what: string): string[] {
   return v as string[];
 }
 
-function toArgs(raw: unknown, where: string): ArgCondition[] {
+function toArgs(
+  raw: unknown,
+  where: string,
+  allowed: ArgOp[] = ARG_OPS,
+): ArgCondition[] {
   const m = asObject(raw, `${where} arguments`);
   const out: ArgCondition[] = [];
   for (const [key, predRaw] of Object.entries(m)) {
     const pred = asObject(predRaw, `${where} argument "${key}"`);
-    rejectUnknown(pred, new Set(ARG_OPS), `${where} argument "${key}"`);
-    const ops = ARG_OPS.filter((op) => pred[op] !== undefined);
+    rejectUnknown(pred, new Set(allowed), `${where} argument "${key}"`);
+    const ops = allowed.filter((op) => pred[op] !== undefined);
     if (!ops.length)
       throw new Error(`${where}: argument "${key}" has no constraint`);
     for (const op of ops) {
@@ -310,6 +385,70 @@ function toArgs(raw: unknown, where: string): ArgCondition[] {
     }
   }
   return out;
+}
+
+function asNumber(v: unknown, what: string): string {
+  if (typeof v !== "number") throw new Error(`${what} must be a number`);
+  return String(v);
+}
+
+function toHistory(raw: unknown, where: string): HistoryClause[] {
+  if (!Array.isArray(raw)) throw new Error(`${where} history must be a list`);
+  return raw.map((cRaw, i) => {
+    const at = `${where} history ${i + 1}`;
+    const c = asObject(cRaw, at);
+    rejectUnknown(c, HISTORY_KEYS, at);
+    if (c.target !== undefined && c.targets !== undefined) {
+      throw new Error(`${at}: uses both "target" and "targets"`);
+    }
+    if (c.sum !== undefined && c.distinct !== undefined) {
+      throw new Error(`${at}: uses both "sum" and "distinct"`);
+    }
+
+    let scope: HistoryScope = "execution";
+    if (c.scope !== undefined) {
+      const sc = asString(c.scope, `${at} scope`);
+      if (!HISTORY_SCOPES.includes(sc as HistoryScope)) {
+        throw new Error(`${at}: scope must be execution or session`);
+      }
+      scope = sc as HistoryScope;
+    }
+
+    let aggregate: HistoryAggregate = "count";
+    let aggregateArg = "";
+    if (c.sum !== undefined) {
+      aggregate = "sum";
+      aggregateArg = asString(c.sum, `${at} sum`);
+    } else if (c.distinct !== undefined) {
+      aggregate = "distinct";
+      aggregateArg = asString(c.distinct, `${at} distinct`);
+    }
+
+    return {
+      uid: uid(),
+      targets:
+        c.target !== undefined
+          ? [asString(c.target, `${at} target`)]
+          : c.targets !== undefined
+            ? asStringList(c.targets, `${at} targets`)
+            : [],
+      args:
+        c.arguments === undefined
+          ? []
+          : toArgs(c.arguments, at, HISTORY_ARG_OPS),
+      result:
+        c.result === undefined ? [] : toArgs(c.result, at, HISTORY_ARG_OPS),
+      scope,
+      // A bare number would be read as nanoseconds, as with rate_limit window.
+      within: c.within === undefined ? "" : asString(c.within, `${at} within`),
+      aggregate,
+      aggregateArg,
+      atLeast:
+        c.at_least === undefined ? "" : asNumber(c.at_least, `${at} at_least`),
+      atMost:
+        c.at_most === undefined ? "" : asNumber(c.at_most, `${at} at_most`),
+    };
+  });
 }
 
 function toRateLimit(raw: unknown, where: string): RateLimit {
@@ -475,6 +614,8 @@ function toRule(raw: unknown, i: number): RuleDraft {
 
   const args =
     when.arguments === undefined ? [] : toArgs(when.arguments, where);
+  const history =
+    when.history === undefined ? [] : toHistory(when.history, where);
 
   const then =
     r.then === undefined || r.then === null
@@ -513,6 +654,7 @@ function toRule(raw: unknown, i: number): RuleDraft {
     targets,
     agentIds,
     args,
+    history,
     decision: decision as Decision,
     reason:
       then.reason === undefined ? "" : asString(then.reason, `${where} reason`),
@@ -577,6 +719,29 @@ function push(bag: Record<string, string[]>, key: string, msg: string) {
   (bag[key] ??= []).push(msg);
 }
 
+function validateArgs(
+  args: ArgCondition[],
+  label: string,
+  fail: (m: string) => void,
+) {
+  const seenOps = new Set<string>();
+  for (const a of args) {
+    if (!a.key.trim()) {
+      fail(`${label} condition has no name.`);
+      continue;
+    }
+    const sig = `${a.key.trim()}:${a.op}`;
+    if (seenOps.has(sig))
+      fail(`${label} "${a.key.trim()}" has two "${a.op}" constraints.`);
+    seenOps.add(sig);
+    const empty = a.op === "one_of" ? a.values.length === 0 : !a.value;
+    if (empty)
+      fail(
+        `${label} "${a.key.trim()}" needs a value — the engine ignores an empty one.`,
+      );
+  }
+}
+
 export function validateDraft(d: PolicyDraft): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   const ids = new Map<string, number>();
@@ -603,28 +768,27 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
     if (r.agentIds !== null && r.agentIds.length === 0)
       push(errors, r.uid, "Agent condition has no value.");
 
-    const seenOps = new Set<string>();
-    for (const a of r.args) {
-      if (!a.key.trim()) {
-        push(errors, r.uid, "Argument condition has no name.");
-        continue;
-      }
-      const sig = `${a.key.trim()}:${a.op}`;
-      if (seenOps.has(sig))
-        push(
-          errors,
-          r.uid,
-          `Argument "${a.key.trim()}" has two "${a.op}" constraints.`,
+    validateArgs(r.args, "Argument", (m) => push(errors, r.uid, m));
+    r.history.forEach((h, j) => {
+      const fail = (m: string) => push(errors, r.uid, `History ${j + 1}: ${m}`);
+      validateArgs(h.args, "Argument", fail);
+      validateArgs(h.result, "Result", fail);
+      const w = h.within.trim();
+      if (w && !DURATION_RE.test(w))
+        fail(`Within "${w}" is not a duration (e.g. 1h, 24h).`);
+      if (h.aggregate !== "count" && !h.aggregateArg.trim())
+        fail(
+          `Name the argument to ${h.aggregate === "sum" ? "add up" : "count distinct values of"}.`,
         );
-      seenOps.add(sig);
-      const empty = a.op === "one_of" ? a.values.length === 0 : !a.value;
-      if (empty)
-        push(
-          errors,
-          r.uid,
-          `Argument "${a.key.trim()}" needs a value — the engine ignores an empty one.`,
-        );
-    }
+      const lo = h.atLeast.trim();
+      const hi = h.atMost.trim();
+      if (lo && !Number.isFinite(Number(lo)))
+        fail(`At least "${lo}" is not a number.`);
+      if (hi && !Number.isFinite(Number(hi)))
+        fail(`At most "${hi}" is not a number.`);
+      if (lo && hi && Number(lo) > Number(hi))
+        fail("At least is above at most, so the condition never holds.");
+    });
 
     if (
       mayRequireApproval(r.decision) &&
@@ -711,6 +875,7 @@ function sameArg(x: ArgCondition, y: ArgCondition): boolean {
  * claiming a rule is dead is worse than staying quiet.
  */
 function subsumes(a: RuleDraft, b: RuleDraft): boolean {
+  if (a.history.length) return false;
   if (a.stepKind !== null && a.stepKind !== b.stepKind) return false;
   if (
     a.targets !== null &&

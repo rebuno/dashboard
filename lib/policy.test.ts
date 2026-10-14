@@ -34,6 +34,40 @@ rules:
       reason: non-safe shell command needs approval
 `;
 
+const HISTORY_BUNDLE = `default_action: deny
+rules:
+  - id: refund-after-lookup
+    when:
+      target: issue_refund
+      history:
+        - target: lookup_order
+          within: 1h
+          arguments:
+            order_id:
+              equals_arg: order_id
+          result:
+            status:
+              equals: delivered
+    then:
+      decision: allow
+  - id: transfer-under-cap
+    when:
+      target: transfer
+      history:
+        - target: transfer
+          scope: session
+          within: 24h
+          sum: amount
+          at_most: 5000
+    then:
+      decision: allow
+  - id: transfer-over-cap
+    when:
+      target: transfer
+    then:
+      decision: require_approval
+`;
+
 function ok(text: string): PolicyDraft {
   const r = parseBundle(text);
   if (!r.ok) throw new Error(`expected parse to succeed: ${r.reason}`);
@@ -275,6 +309,27 @@ describe("serializeDraft", () => {
     expect(serializeDraft(ok(once))).toBe(once);
   });
 
+  it("round-trips history clauses", () => {
+    const d = ok(HISTORY_BUNDLE);
+    expect(d.rules[0].history[0]).toMatchObject({
+      targets: ["lookup_order"],
+      within: "1h",
+      args: [{ key: "order_id", op: "equals_arg", value: "order_id" }],
+      result: [{ key: "status", op: "equals", value: "delivered" }],
+    });
+    expect(d.rules[1].history[0]).toMatchObject({
+      scope: "session",
+      aggregate: "sum",
+      aggregateArg: "amount",
+      atLeast: "",
+      atMost: "5000",
+    });
+    const once = serializeDraft(d);
+    expect(serializeDraft(ok(once))).toBe(once);
+    expect(once).toContain("at_most: 5000");
+    expect(once).not.toContain("scope: execution");
+  });
+
   it("preserves the regex exactly through a round-trip", () => {
     const original = ok(SHELL_BUNDLE).rules[1].args[0].value;
     const reparsed = ok(serializeDraft(ok(SHELL_BUNDLE))).rules[1].args[0]
@@ -482,6 +537,22 @@ describe("serializeDraft", () => {
   });
 });
 
+describe("parseBundle history", () => {
+  // In a rule's own arguments it would compare the call with itself.
+  it("leaves equals_arg outside history to the raw editor", () => {
+    const r = parseBundle(`rules:
+  - id: a
+    when:
+      arguments:
+        from:
+          equals_arg: to
+    then:
+      decision: deny
+`);
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("validateDraft", () => {
   it("accepts the shell example", () => {
     expect(validateDraft(ok(SHELL_BUNDLE))).toEqual({});
@@ -642,6 +713,10 @@ describe("lintDraft", () => {
         rules: [rule({ id: "a", targets: ["x"] }), catchAll],
       }),
     ).toEqual({});
+  });
+
+  it("does not treat a rule with history as covering the rules below it", () => {
+    expect(lintDraft(ok(HISTORY_BUNDLE))).toEqual({});
   });
 
   it("flags a rule with the same conditions as one above it", () => {
