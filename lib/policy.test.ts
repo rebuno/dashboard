@@ -330,6 +330,25 @@ describe("serializeDraft", () => {
     expect(once).not.toContain("scope: execution");
   });
 
+  it("round-trips subject conditions and per-subject rate limits", () => {
+    const d = ok(`
+rules:
+  - id: a
+    when:
+      subjects: ["user:alice@corp.com", "group:support"]
+    then:
+      decision: allow
+      rate_limit: { max_calls: 5, window: 1m, per_what: subject }
+`);
+    expect(d.rules[0].subjects).toEqual([
+      "user:alice@corp.com",
+      "group:support",
+    ]);
+    expect(d.rules[0].rateLimit?.perWhat).toBe("subject");
+    const once = serializeDraft(d);
+    expect(serializeDraft(ok(once))).toBe(once);
+  });
+
   it("preserves the regex exactly through a round-trip", () => {
     const original = ok(SHELL_BUNDLE).rules[1].args[0].value;
     const reparsed = ok(serializeDraft(ok(SHELL_BUNDLE))).rules[1].args[0]

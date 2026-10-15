@@ -78,6 +78,7 @@ const PER_WHAT_LABEL: Record<PerWhat, string> = {
   execution: "per execution",
   session: "per session",
   agent: "per agent",
+  subject: "per subject",
   global: "across everything",
 };
 
@@ -387,6 +388,7 @@ function RuleCard({
     if (kind === "step_kind") onPatch({ stepKind: "tool_call" });
     else if (kind === "target") onPatch({ targets: [] });
     else if (kind === "agent") onPatch({ agentIds: [] });
+    else if (kind === "subject") onPatch({ subjects: [] });
     else if (kind === "argument") onPatch({ args: [...rule.args, newArg()] });
     else if (kind === "history")
       onPatch({ history: [...rule.history, emptyHistoryClause()] });
@@ -491,6 +493,7 @@ function RuleCard({
           {rule.stepKind === null &&
           rule.targets === null &&
           rule.agentIds === null &&
+          rule.subjects === null &&
           !rule.args.length &&
           !rule.history.length
             ? "— matches every step"
@@ -562,6 +565,25 @@ function RuleCard({
           </div>
         )}
 
+        {rule.subjects !== null && (
+          <div className="flex items-center gap-1.5">
+            <span className={rowLabel}>Subject</span>
+            <TokenInput
+              values={rule.subjects}
+              onChange={(v) => onPatch({ subjects: v })}
+              placeholder="user:alice@corp.com, group:support …"
+            />
+            <button
+              type="button"
+              onClick={() => onPatch({ subjects: null })}
+              className={removeButton}
+              aria-label="Remove subject condition"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <ArgRows
           label="Argument"
           args={rule.args}
@@ -595,6 +617,7 @@ function RuleCard({
           )}
           {rule.targets === null && <option value="target">Target</option>}
           {rule.agentIds === null && <option value="agent">Agent</option>}
+          {rule.subjects === null && <option value="subject">Subject</option>}
           <option value="argument">Argument</option>
           <option value="history">History</option>
         </select>

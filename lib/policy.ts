@@ -5,7 +5,7 @@ export type Verdict = Exclude<Decision, "judge">;
 export type StepKind = "tool_call" | "llm_call" | "local";
 export type ArgOp = "equals" | "contains" | "one_of" | "regex" | "equals_arg";
 export type DefaultAction = "allow" | "deny";
-export type PerWhat = "execution" | "session" | "agent" | "global";
+export type PerWhat = "execution" | "session" | "agent" | "subject" | "global";
 export type LimiterError = "allow" | "deny";
 export type OnExceed = "deny" | "require_approval";
 export type BudgetScope = "execution" | "session";
@@ -22,7 +22,13 @@ export const VERDICTS: Verdict[] = ["allow", "deny", "require_approval"];
 export const STEP_KINDS: StepKind[] = ["tool_call", "llm_call", "local"];
 export const ARG_OPS: ArgOp[] = ["equals", "contains", "one_of", "regex"];
 export const HISTORY_ARG_OPS: ArgOp[] = [...ARG_OPS, "equals_arg"];
-export const PER_WHATS: PerWhat[] = ["execution", "session", "agent", "global"];
+export const PER_WHATS: PerWhat[] = [
+  "execution",
+  "session",
+  "agent",
+  "subject",
+  "global",
+];
 export const LIMITER_ERRORS: LimiterError[] = ["allow", "deny"];
 export const ON_EXCEEDS: OnExceed[] = ["deny", "require_approval"];
 export const BUDGET_SCOPES: BudgetScope[] = ["execution", "session"];
@@ -85,6 +91,7 @@ export interface RuleDraft {
   stepKind: StepKind | null; // null = condition row absent
   targets: string[] | null;
   agentIds: string[] | null;
+  subjects: string[] | null;
   args: ArgCondition[];
   history: HistoryClause[];
   decision: Decision;
@@ -118,6 +125,7 @@ export function emptyRule(): RuleDraft {
     stepKind: null,
     targets: null,
     agentIds: null,
+    subjects: null,
     args: [],
     history: [],
     decision: "allow",
@@ -178,6 +186,7 @@ export function isCatchAll(r: RuleDraft): boolean {
     r.stepKind === null &&
     !r.targets?.length &&
     !r.agentIds?.length &&
+    !r.subjects?.length &&
     r.args.length === 0 &&
     r.history.length === 0
   );
@@ -222,6 +231,7 @@ function ruleToYaml(r: RuleDraft): Record<string, unknown> {
   else if (r.targets && r.targets.length > 1) when.targets = r.targets;
   if (r.agentIds?.length === 1) when.agent_id = r.agentIds[0];
   else if (r.agentIds && r.agentIds.length > 1) when.agent_ids = r.agentIds;
+  if (r.subjects?.length) when.subjects = r.subjects;
   const args = argsToYaml(r.args);
   if (args) when.arguments = args;
   if (r.history.length) when.history = r.history.map(historyToYaml);
@@ -289,6 +299,7 @@ const WHEN_KEYS = new Set([
   "targets",
   "agent_id",
   "agent_ids",
+  "subjects",
   "step_kind",
   "arguments",
   "history",
@@ -612,6 +623,11 @@ function toRule(raw: unknown, i: number): RuleDraft {
   else if (when.agent_ids !== undefined)
     agentIds = asStringList(when.agent_ids, `${where} agent_ids`);
 
+  const subjects =
+    when.subjects === undefined
+      ? null
+      : asStringList(when.subjects, `${where} subjects`);
+
   const args =
     when.arguments === undefined ? [] : toArgs(when.arguments, where);
   const history =
@@ -653,6 +669,7 @@ function toRule(raw: unknown, i: number): RuleDraft {
     stepKind,
     targets,
     agentIds,
+    subjects,
     args,
     history,
     decision: decision as Decision,
@@ -767,6 +784,8 @@ export function validateDraft(d: PolicyDraft): Record<string, string[]> {
       push(errors, r.uid, "Target condition has no value.");
     if (r.agentIds !== null && r.agentIds.length === 0)
       push(errors, r.uid, "Agent condition has no value.");
+    if (r.subjects !== null && r.subjects.length === 0)
+      push(errors, r.uid, "Subject condition has no value.");
 
     validateArgs(r.args, "Argument", (m) => push(errors, r.uid, m));
     r.history.forEach((h, j) => {
@@ -885,6 +904,11 @@ function subsumes(a: RuleDraft, b: RuleDraft): boolean {
   if (
     a.agentIds !== null &&
     (b.agentIds === null || !b.agentIds.every((t) => a.agentIds!.includes(t)))
+  )
+    return false;
+  if (
+    a.subjects !== null &&
+    (b.subjects === null || !b.subjects.every((t) => a.subjects!.includes(t)))
   )
     return false;
   return a.args.every((x) => b.args.some((y) => sameArg(x, y)));

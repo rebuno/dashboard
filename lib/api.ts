@@ -10,6 +10,9 @@ export interface Execution {
   session?: string;
   parent_execution_id?: string;
   spawned_by?: { execution_id: string; step_id: string };
+  created_by?: string;
+  on_behalf_of?: string;
+  subject_groups?: string[];
   forked_from?: string;
   fork_seq?: number;
   created_at: string;
@@ -75,6 +78,7 @@ export interface Approval {
   message?: string;
   timeout_at: string;
   decided_by?: string;
+  asserted_by?: string;
   decided_at?: string;
   rationale?: string;
   created_at: string;
@@ -251,7 +255,7 @@ export async function listPendingApprovals(): Promise<Approval[]> {
 
 export async function grantApproval(
   id: string,
-  decidedBy: string,
+  decidedBy?: string,
   rationale?: string,
 ): Promise<void> {
   await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/grant`, {
@@ -262,7 +266,7 @@ export async function grantApproval(
 
 export async function denyApproval(
   id: string,
-  decidedBy: string,
+  decidedBy?: string,
   rationale?: string,
 ): Promise<void> {
   await request("POST", `/api/v0/approvals/${encodeURIComponent(id)}/deny`, {

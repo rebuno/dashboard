@@ -249,6 +249,12 @@ export default function ExecutionDetailView({
               Deadline {new Date(execution.deadline_at).toLocaleString()}
             </span>
           )}
+          {execution.created_by && (
+            <span>Created by {execution.created_by}</span>
+          )}
+          {execution.on_behalf_of && (
+            <span>On behalf of {execution.on_behalf_of}</span>
+          )}
           {execution.session && <span>Session {execution.session}</span>}
           {execution.parent_execution_id && (
             <span>

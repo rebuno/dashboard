@@ -42,9 +42,17 @@ export default function ApprovalCard({
     setApproverName(trimmedName);
     try {
       if (action === "grant") {
-        await grantApproval(approval.id, trimmedName, rationale || undefined);
+        await grantApproval(
+          approval.id,
+          trimmedName || undefined,
+          rationale || undefined,
+        );
       } else {
-        await denyApproval(approval.id, trimmedName, rationale || undefined);
+        await denyApproval(
+          approval.id,
+          trimmedName || undefined,
+          rationale || undefined,
+        );
       }
       onDecided();
     } catch (e) {
@@ -98,7 +106,8 @@ export default function ApprovalCard({
               htmlFor={`approver-${approval.id}`}
               className="mb-1.5 block text-xs font-medium text-ink-muted"
             >
-              Approver
+              Approve as{" "}
+              <span className="font-normal text-ink-faint">optional</span>
             </label>
             <input
               id={`approver-${approval.id}`}
@@ -134,7 +143,7 @@ export default function ApprovalCard({
           <button
             type="button"
             onClick={() => decide("deny")}
-            disabled={!trimmedName || busy !== null}
+            disabled={busy !== null}
             className="button-danger"
           >
             {busy === "deny" ? "Denying…" : "Deny"}
@@ -142,7 +151,7 @@ export default function ApprovalCard({
           <button
             type="button"
             onClick={() => decide("grant")}
-            disabled={!trimmedName || busy !== null}
+            disabled={busy !== null}
             className="button-success"
           >
             {busy === "grant" ? "Approving…" : "Approve"}
