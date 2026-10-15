@@ -10,7 +10,6 @@ import {
   grantApproval,
   type Step,
 } from "@/lib/api";
-import { getApproverName, setApproverName } from "@/lib/storage";
 
 export default function ApprovalCard({
   approval,
@@ -26,7 +25,6 @@ export default function ApprovalCard({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setName(getApproverName());
     getStep(approval.execution_id, approval.step_id)
       .then(setStep)
       .catch(() => setStep(null));
@@ -39,7 +37,6 @@ export default function ApprovalCard({
   async function decide(action: "grant" | "deny") {
     setError(null);
     setBusy(action);
-    setApproverName(trimmedName);
     try {
       if (action === "grant") {
         await grantApproval(

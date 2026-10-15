@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import SignOut from "@/components/SignOut";
 import ThemeToggle from "@/components/ThemeToggle";
 import { checkHealth, listPendingApprovals } from "@/lib/api";
 import { APPROVALS_POLL_INTERVAL, HEALTH_POLL_INTERVAL } from "@/lib/constants";
@@ -151,6 +152,7 @@ export default function Sidebar() {
 
         <div className="space-y-1 border-t border-line p-3">
           <ThemeToggle />
+          <SignOut />
           <div
             className="flex items-center gap-2.5 px-3 py-2 text-xs text-ink-muted"
             title={connectionLabel}
@@ -196,6 +198,7 @@ export default function Sidebar() {
           {NAV_ITEMS.map((item) => navLink(item, true))}
         </nav>
         <ThemeToggle compact />
+        <SignOut compact />
       </header>
     </>
   );

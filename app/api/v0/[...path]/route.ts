@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  currentSession,
+  loginRequired,
+  oidcEnabled,
+  type Session,
+  sameOrigin,
+  writeSession,
+} from "@/lib/auth";
 
 const REBUNO_URL = process.env.REBUNO_URL || "http://localhost:8080";
 const REBUNO_API_KEY = process.env.REBUNO_API_KEY || "";
 
 async function proxy(req: NextRequest) {
+  if (!oidcEnabled()) return forward(req, REBUNO_API_KEY);
+  if (req.method !== "GET" && req.method !== "HEAD" && !sameOrigin(req)) {
+    return NextResponse.json(
+      { error: "Cross-origin request" },
+      { status: 403 },
+    );
+  }
+  const { session, changed } = await currentSession(req);
+  const res = session ? await forward(req, session.token) : loginRequired();
+  if (changed) writeSession(req, res, session as Session | null);
+  return res;
+}
+
+async function forward(req: NextRequest, token: string) {
   const url = new URL(req.url);
 
   if (!url.pathname.startsWith("/api/v0/") || url.pathname.includes("..")) {
@@ -16,7 +38,7 @@ async function proxy(req: NextRequest) {
   const headers: Record<string, string> = {};
   const contentType = req.headers.get("Content-Type");
   if (contentType) headers["Content-Type"] = contentType;
-  if (REBUNO_API_KEY) headers["Authorization"] = `Bearer ${REBUNO_API_KEY}`;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const init: RequestInit = { method: req.method, headers };
   if (req.method !== "GET" && req.method !== "HEAD") {

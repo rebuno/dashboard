@@ -96,6 +96,22 @@ export interface Agent {
   output_schema?: JsonSchema;
 }
 
+export function signInIfRequired(status: number, data: unknown) {
+  if (
+    status === 401 &&
+    (data as { code?: string } | null)?.code === "login_required"
+  ) {
+    const back = window.location.pathname + window.location.search;
+    window.location.assign(`/auth/login?return=${encodeURIComponent(back)}`);
+  }
+}
+
+export async function getSessionUser(): Promise<string | null> {
+  const resp = await fetch("/auth/session");
+  const data = await resp.json().catch(() => null);
+  return data?.user ?? null;
+}
+
 async function request(
   method: string,
   path: string,
@@ -112,6 +128,7 @@ async function request(
   if (resp.status === 204) return undefined;
   const data = await resp.json().catch(() => null);
   if (!resp.ok) {
+    signInIfRequired(resp.status, data);
     const message = (data && (data.message || data.error)) || resp.statusText;
     throw new Error(message);
   }

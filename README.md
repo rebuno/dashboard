@@ -35,8 +35,17 @@ Requires Node 24 and a running Rebuno kernel.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REBUNO_URL` | `http://localhost:8080` | kernel base URL |
-| `REBUNO_API_KEY` | none | bearer token for the kernel's client and admin routes |
+| `REBUNO_API_KEY` | none | bearer token for the kernel's client and admin routes without sign-in |
 | `PROMETHEUS_URL` | none | metrics source; without it the metrics page reads the kernel's own counters |
+| `OIDC_ISSUER` | none | identity provider issuer; turns on sign-in |
+| `OIDC_CLIENT_ID` | none | the dashboard's client ID; required with `OIDC_ISSUER` |
+| `OIDC_CLIENT_SECRET` | none | client secret; omit for a public client |
+| `OIDC_SCOPES` | `openid email profile offline_access` | scopes requested at sign-in |
+| `OIDC_FORWARD_TOKEN` | `id` | token forwarded to the kernel: `id` or `access` |
+| `DASHBOARD_URL` | none | external URL for sign-in redirects; required with `OIDC_ISSUER` |
+| `SESSION_SECRET` | none | at least 32 characters; encrypts the session cookie; required with `OIDC_ISSUER` |
+
+See [Sign-in](https://github.com/rebuno/rebuno/blob/main/docs/dashboard.mdx#sign-in) for identity provider setup.
 
 ## Scripts
 

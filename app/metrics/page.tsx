@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import BreakdownBars from "@/components/metrics/BreakdownBars";
 import CounterCard from "@/components/metrics/CounterCard";
 import QuantileCard from "@/components/metrics/QuantileCard";
+import { signInIfRequired } from "@/lib/api";
 import { METRICS_POLL_INTERVAL, METRICS_RANGES } from "@/lib/constants";
 import { usePolling } from "@/lib/hooks";
 
@@ -34,8 +35,10 @@ export default function MetricsPage() {
       const resp = await fetch(`/api/metrics/query?range=${range}`);
       const body = await resp.json();
       if (requested.current !== range) return;
-      if (!resp.ok)
+      if (!resp.ok) {
+        signInIfRequired(resp.status, body);
         throw new Error(body.error || `Metrics fetch failed: ${resp.status}`);
+      }
       setData(body);
       setError(null);
     } catch (e) {

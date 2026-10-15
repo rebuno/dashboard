@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  currentSession,
+  loginRequired,
+  oidcEnabled,
+  writeSession,
+} from "@/lib/auth";
 import { METRICS_RANGES } from "@/lib/constants";
 import {
   groupByLabel,
@@ -96,6 +102,14 @@ async function fromKernel() {
 }
 
 export async function GET(req: NextRequest) {
+  if (!oidcEnabled()) return metrics(req);
+  const { session, changed } = await currentSession(req);
+  const res = session ? await metrics(req) : loginRequired();
+  if (changed) writeSession(req, res, session);
+  return res;
+}
+
+async function metrics(req: NextRequest) {
   if (!PROMETHEUS_URL) {
     try {
       return NextResponse.json(await fromKernel());
