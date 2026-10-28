@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PolicyDiff from "@/components/agents/PolicyDiff";
+import PolicyTester from "@/components/agents/PolicyTester";
 import { loadPolicy } from "@/lib/api";
 import {
   ARG_OPS,
@@ -1189,6 +1190,7 @@ export default function PolicyEditor({
         </div>
       ) : (
         <textarea
+          aria-label="Policy YAML"
           value={rawYaml}
           onChange={(e) => setRawYaml(e.target.value)}
           onKeyDown={(e) => {
@@ -1220,6 +1222,7 @@ export default function PolicyEditor({
       {error && pending === null && (
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
+      <PolicyTester agentId={agentId} bundle={currentYaml} />
     </div>
   );
 }

@@ -96,6 +96,55 @@ export interface Agent {
   output_schema?: JsonSchema;
 }
 
+export type PolicyTestDecision = "allow" | "deny" | "require_approval";
+
+export interface PolicyTestCase {
+  name?: string;
+  agent_id?: string;
+  subject?: string;
+  subject_groups?: string[];
+  kind?: Step["kind"];
+  target: string;
+  args?: Record<string, unknown>;
+  expect?: PolicyTestDecision;
+  expect_rule?: string;
+  history?: {
+    kind?: Step["kind"];
+    target: string;
+    args?: Record<string, unknown>;
+    result?: unknown;
+    ago?: number;
+  }[];
+  execution_id?: string;
+  step_id?: string;
+  was_rule?: string;
+}
+
+export interface PolicyTestResult extends PolicyTestCase {
+  decision: PolicyTestDecision;
+  rule_id?: string;
+  reason?: string;
+  pass: boolean;
+  failure?: string;
+}
+
+export interface PolicyTestReport {
+  results: PolicyTestResult[];
+  failed: number;
+  unexercised_rules?: string[];
+}
+
+export interface PolicyTestRequest {
+  bundle: string;
+  cases?: PolicyTestCase[];
+  execution_id?: string;
+  executions?: {
+    session?: string;
+    since?: string;
+    limit?: number;
+  };
+}
+
 export function signInIfRequired(status: number, data: unknown) {
   if (
     status === 401 &&
@@ -320,4 +369,17 @@ export async function loadPolicy(
   await request("POST", `/api/v0/policies/${encodeURIComponent(agentId)}`, {
     bundle,
   });
+}
+
+export async function testPolicy(
+  agentId: string,
+  body: PolicyTestRequest,
+  signal?: AbortSignal,
+): Promise<PolicyTestReport> {
+  return request(
+    "POST",
+    `/api/v0/policies/${encodeURIComponent(agentId)}/test`,
+    body,
+    signal,
+  );
 }
